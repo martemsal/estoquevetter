@@ -11,12 +11,14 @@ import {
   Plus, 
   Minus, 
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import BarcodeScannerModal from '../components/BarcodeScannerModal';
+import { playBeep } from '../utils/sound';
 
 export default function OutflowPage({ preselectedProduct = null, onClearPreselected, showToast }) {
   const { user, activeCentral, refreshAlertCount } = useAuth();
@@ -75,12 +77,37 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
     );
 
     if (found) {
+      playBeep('success');
       setSelectedProduct(found);
       setQuantidade(1);
-      showToast({ type: 'info', message: `Produto identificado: ${found.nome}` });
+      setSearchTerm('');
+      showToast({ type: 'success', message: `Código lido com sucesso: ${found.nome}` });
     } else {
-      showToast({ type: 'warning', message: `Nenhum produto cadastrado com o código: ${scannedCode}` });
+      playBeep('alert');
+      showToast({ type: 'warning', message: `Código não cadastrado: ${scannedCode}` });
       setSearchTerm(scannedCode);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (!searchTerm.trim()) return;
+    const term = searchTerm.trim().toLowerCase();
+    const found = produtos.find(
+      p => (p.codigo_barras && p.codigo_barras.toLowerCase() === term) ||
+           p.nome.toLowerCase() === term ||
+           p.nome.toLowerCase().includes(term)
+    );
+
+    if (found) {
+      playBeep('success');
+      setSelectedProduct(found);
+      setQuantidade(1);
+      setSearchTerm('');
+      showToast({ type: 'success', message: `Produto identificado: ${found.nome}` });
+    } else {
+      playBeep('alert');
+      showToast({ type: 'warning', message: `Nenhum produto encontrado para: "${searchTerm}"` });
     }
   };
 
@@ -219,16 +246,60 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
               <span className="text-xs text-slate-500 font-semibold">{filteredProducts.length} itens</span>
             </div>
 
-            {/* Search Input */}
-            <div className="relative mb-3">
+            {/* Primary Tablet Camera Scanner Action Button */}
+            <button
+              type="button"
+              onClick={() => setIsScannerOpen(true)}
+              className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-3 active:scale-95 transition mb-3 border border-emerald-400/40"
+            >
+              <ScanBarcode className="w-6 h-6 animate-pulse" />
+              <div className="text-left">
+                <div className="text-sm font-black leading-none">ESCANEAR CÓDIGO COM A CÂMERA</div>
+                <div className="text-[10px] text-emerald-100 font-normal mt-0.5">Leitura rápida de Código de Barras / QR Code com Beep</div>
+              </div>
+            </button>
+
+            {/* Search or Physical Scanner Input Form */}
+            <form onSubmit={handleSearchSubmit} className="relative mb-2">
               <Search className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Digitar nome ou código..."
-                className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition text-sm"
+                placeholder="Digitar código/nome ou usar leitor USB/Bluetooth (Enter)..."
+                className="w-full pl-12 pr-12 py-3 bg-slate-950 border border-slate-700 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition text-sm"
               />
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition"
+              >
+                Buscar
+              </button>
+            </form>
+
+            {/* Quick Barcode Test Simulation Buttons */}
+            <div className="mb-3 p-2 bg-slate-950/40 rounded-2xl border border-slate-800/80">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+                <Zap className="w-3 h-3 text-amber-400" />
+                Atalhos de Código (1-Toque para Teste):
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { label: 'Fita Adesiva', code: '78910001001' },
+                  { label: 'Parafusadeira', code: '78910002002' },
+                  { label: 'Caixa 40x40', code: '78910003003' }
+                ].map(item => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => handleBarcodeScanned(item.code)}
+                    className="py-1.5 px-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-left truncate active:scale-95 transition"
+                  >
+                    <div className="text-[11px] font-bold text-slate-200 truncate">{item.label}</div>
+                    <div className="text-[9px] text-emerald-400 font-mono truncate">{item.code}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Product selection list (touch friendly scrolling) */}

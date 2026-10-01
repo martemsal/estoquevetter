@@ -1,22 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { ScanBarcode, X, Zap, RefreshCw } from 'lucide-react';
+import { ScanBarcode, X, Zap, RefreshCw, Volume2 } from 'lucide-react';
+import { playBeep } from '../utils/sound';
 
 export default function BarcodeScannerModal({ isOpen, onClose, onScan }) {
   const [scannerError, setScannerError] = useState(null);
   const [facingMode, setFacingMode] = useState('environment');
+  const [isScanning, setIsScanning] = useState(false);
   const qrRegionId = 'tablet-barcode-reader';
   const html5QrCodeRef = useRef(null);
 
   useEffect(() => {
-    if (!isOpen) {
+    let timer;
+    if (isOpen) {
+      // Small timeout to guarantee DOM node is rendered
+      timer = setTimeout(() => {
+        startScanner();
+      }, 150);
+    } else {
       stopScanner();
-      return;
     }
 
-    startScanner();
-
     return () => {
+      clearTimeout(timer);
       stopScanner();
     };
   }, [isOpen, facingMode]);
@@ -24,6 +30,9 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan }) {
   const startScanner = async () => {
     stopScanner();
     setScannerError(null);
+
+    const elem = document.getElementById(qrRegionId);
+    if (!elem) return;
 
     try {
       const qrCode = new Html5Qrcode(qrRegionId);
@@ -42,30 +51,38 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan }) {
           handleSuccess(decodedText);
         },
         () => {
-          // ignore scan frame errors
+          // ignore frame errors
         }
       );
+      setIsScanning(true);
     } catch (err) {
       console.warn('Erro ao inicializar scanner:', err);
-      setScannerError('Acesso à câmera indisponível ou permissão negada.');
+      setScannerError('Acesso à câmera indisponível ou permissão não concedida.');
+      setIsScanning(false);
     }
   };
 
   const stopScanner = () => {
+    setIsScanning(false);
     if (html5QrCodeRef.current) {
-      if (html5QrCodeRef.current.isScanning) {
-        html5QrCodeRef.current.stop().catch(() => {}).then(() => {
-          html5QrCodeRef.current?.clear();
-          html5QrCodeRef.current = null;
+      const scanner = html5QrCodeRef.current;
+      html5QrCodeRef.current = null;
+      if (scanner.isScanning) {
+        scanner.stop().catch(() => {}).finally(() => {
+          try {
+            scanner.clear();
+          } catch (_) {}
         });
       } else {
-        html5QrCodeRef.current.clear();
-        html5QrCodeRef.current = null;
+        try {
+          scanner.clear();
+        } catch (_) {}
       }
     }
   };
 
   const handleSuccess = (code) => {
+    playBeep('success');
     stopScanner();
     onScan(code);
     onClose();
@@ -90,6 +107,9 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan }) {
           <div className="flex items-center gap-2">
             <ScanBarcode className="w-5 h-5 text-emerald-400" />
             <h3 className="font-semibold text-lg text-slate-100">Leitor de Código / QR</h3>
+            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold border border-emerald-800 flex items-center gap-1">
+              <Volume2 className="w-3 h-3" /> Beep Ativo
+            </span>
           </div>
           <button
             onClick={() => {
@@ -103,7 +123,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan }) {
         </div>
 
         {/* Camera Container */}
-        <div className="relative bg-black flex flex-col items-center justify-center min-h-[300px] overflow-hidden p-2">
+        <div className="relative bg-black flex flex-col items-center justify-center min-h-[320px] overflow-hidden p-2">
           <div id={qrRegionId} className="w-full max-w-sm rounded-xl overflow-hidden" />
           
           {scannerError && (
@@ -121,11 +141,11 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan }) {
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              Simular Leitura de Código (Atalho Rápido):
+              Simular Leitura de Código (1-Toque):
             </span>
             <button
               onClick={() => setFacingMode(prev => prev === 'environment' ? 'user' : 'environment')}
-              className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1"
+              className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 font-semibold"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Alternar Câmera
             </button>
