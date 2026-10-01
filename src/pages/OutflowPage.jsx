@@ -70,10 +70,12 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
   }, [activeCentral]);
 
   const handleBarcodeScanned = (scannedCode) => {
-    const cleanCode = scannedCode.trim().toLowerCase();
-    const found = produtos.find(
-      p => (p.codigo_barras && p.codigo_barras.toLowerCase() === cleanCode) ||
-           p.nome.toLowerCase().includes(cleanCode)
+    if (!scannedCode) return;
+    const cleanCode = String(scannedCode).trim().toLowerCase();
+    const list = Array.isArray(produtos) ? produtos : [];
+    const found = list.find(
+      p => (p.codigo_barras && String(p.codigo_barras).trim().toLowerCase() === cleanCode) ||
+           (p.nome && String(p.nome).toLowerCase().includes(cleanCode))
     );
 
     if (found) {
@@ -85,18 +87,19 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
     } else {
       playBeep('alert');
       showToast({ type: 'warning', message: `Código não cadastrado: ${scannedCode}` });
-      setSearchTerm(scannedCode);
+      setSearchTerm(String(scannedCode));
     }
   };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    if (!searchTerm.trim()) return;
-    const term = searchTerm.trim().toLowerCase();
-    const found = produtos.find(
-      p => (p.codigo_barras && p.codigo_barras.toLowerCase() === term) ||
-           p.nome.toLowerCase() === term ||
-           p.nome.toLowerCase().includes(term)
+    if (!searchTerm || !searchTerm.trim()) return;
+    const term = String(searchTerm).trim().toLowerCase();
+    const list = Array.isArray(produtos) ? produtos : [];
+    const found = list.find(
+      p => (p.codigo_barras && String(p.codigo_barras).trim().toLowerCase() === term) ||
+           (p.nome && String(p.nome).trim().toLowerCase() === term) ||
+           (p.nome && String(p.nome).toLowerCase().includes(term))
     );
 
     if (found) {
@@ -193,13 +196,13 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
   };
 
   // Filter products for the quick selection drawer
-  const filteredProducts = produtos.filter(p => {
+  const filteredProducts = (Array.isArray(produtos) ? produtos : []).filter(p => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
-      p.nome.toLowerCase().includes(term) ||
-      (p.codigo_barras && p.codigo_barras.toLowerCase().includes(term)) ||
-      p.categoria.toLowerCase().includes(term)
+      (p.nome && String(p.nome).toLowerCase().includes(term)) ||
+      (p.codigo_barras && String(p.codigo_barras).toLowerCase().includes(term)) ||
+      (p.categoria && String(p.categoria).toLowerCase().includes(term))
     );
   });
 

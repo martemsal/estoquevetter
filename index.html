@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" style="background-color: #0b1120;">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -8,16 +8,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Estoque Vetter" />
     <meta name="theme-color" content="#0284c7" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <link rel="manifest" href="/manifest.json" />
     <title>Estoque Vetter | Tablet 3 Centrais</title>
   </head>
-  <body class="bg-slate-900 text-slate-100 min-h-screen selection:bg-sky-500 selection:text-white select-none">
+  <body class="bg-slate-900 text-slate-100 min-h-screen selection:bg-sky-500 selection:text-white select-none" style="background-color: #0b1120; margin: 0; color: #f1f5f9;">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
+          navigator.serviceWorker.register('/sw.js').then((reg) => {
+            reg.update();
+          }).catch(() => {});
         });
       }
     </script>

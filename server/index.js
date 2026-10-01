@@ -48,6 +48,9 @@ if (fs.existsSync(distPath)) {
   // Express 5 catch-all fallback
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      if (req.path.startsWith('/assets/')) {
+        return res.status(404).send('Asset not found');
+      }
       return res.sendFile(path.join(distPath, 'index.html'));
     }
     next();
