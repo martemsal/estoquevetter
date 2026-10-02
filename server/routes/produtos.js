@@ -72,7 +72,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // POST /api/produtos - Create Product (Gerente and Administrador)
-router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), upload.single('foto'), async (req, res) => {
+router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), async (req, res) => {
   try {
     const {
       nome,
@@ -83,15 +83,10 @@ router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), u
       quantidade_inicial,
       central_destino,
       foto_base64
-    } = req.body;
+    } = req.body || {};
 
     if (!nome || !nome.trim()) {
       return res.status(400).json({ error: 'Nome do produto é obrigatório' });
-    }
-
-    let finalFoto = foto_base64;
-    if (req.file) {
-      finalFoto = `/uploads/${req.file.filename}`;
     }
 
     const result = await dataService.createProduto({
@@ -102,8 +97,8 @@ router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), u
       estoque_minimo,
       quantidade_inicial,
       central_destino,
-      foto_base64: finalFoto
-    }, req.user.id);
+      foto_base64
+    }, req.user?.id || 1);
 
     res.status(201).json({
       message: 'Produto cadastrado com sucesso!',
@@ -118,7 +113,7 @@ router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), u
 });
 
 // PUT /api/produtos/:id - Update Product (Gerente and Administrador)
-router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador']), upload.single('foto'), async (req, res) => {
+router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador']), async (req, res) => {
   try {
     const {
       nome,
@@ -127,12 +122,7 @@ router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador']),
       unidade_medida,
       estoque_minimo,
       foto_base64
-    } = req.body;
-
-    let finalFoto = foto_base64;
-    if (req.file) {
-      finalFoto = `/uploads/${req.file.filename}`;
-    }
+    } = req.body || {};
 
     const updated = await dataService.updateProduto(req.params.id, {
       nome,

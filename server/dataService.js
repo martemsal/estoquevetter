@@ -426,14 +426,20 @@ const dataService = {
 
       // 5. Registrar movimentação de entrada inicial se quantidade > 0
       if (initialQty > 0) {
-        await supabase.from('movimentacoes').insert([{
-          produto_id: newProdId,
-          tipo: 'ENTRADA',
-          central: destino,
-          quantidade: initialQty,
-          usuario_id: userId,
-          observacao: `Entrada inicial de cadastro - ${destino}`
-        }]);
+        let validUserId = Number(userId);
+        if (!validUserId || isNaN(validUserId)) validUserId = 1;
+        try {
+          await supabase.from('movimentacoes').insert([{
+            produto_id: newProdId,
+            tipo: 'ENTRADA',
+            central: destino,
+            quantidade: initialQty,
+            usuario_id: validUserId,
+            observacao: `Entrada inicial de cadastro - ${destino}`
+          }]);
+        } catch (mErr) {
+          console.warn('Aviso: erro não-fatal ao registrar histórico inicial:', mErr.message);
+        }
       }
 
       return { id: newProdId, codigo_barras: barcode, foto_path: foto_url };

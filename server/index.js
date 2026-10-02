@@ -58,6 +58,15 @@ if (fs.existsSync(distPath)) {
   });
 }
 
+// Global JSON error handler
+app.use((err, req, res, next) => {
+  console.error('Express Error Handler:', err);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    error: err.message || 'Erro interno no servidor'
+  });
+});
+
 // Start server on 0.0.0.0 for tablet local network accessibility
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);

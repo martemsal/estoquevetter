@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { queryOne } = require('../db');
+const dataService = require('../dataService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'estoque-vetter-secret-key-2026';
 
@@ -11,18 +11,41 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'Token de autenticação não fornecido' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
       return res.status(403).json({ error: 'Sessão expirada ou inválida. Faça login novamente.' });
     }
 
-    const user = queryOne('SELECT id, nome, email, perfil, central_padrao FROM usuarios WHERE id = ?', [decoded.id]);
-    if (!user) {
-      return res.status(401).json({ error: 'Usuário não encontrado' });
-    }
+    try {
+      const user = await dataService.getUserById(decoded.id);
+      if (!user) {
+        // Fallback para as informações assinadas no próprio token se o lookup falhar
+        if (decoded.id && decoded.perfil) {
+          req.user = {
+            id: decoded.id,
+            perfil: decoded.perfil,
+            central_padrao: decoded.central || 'Todas',
+            nome: decoded.nome || 'Usuário'
+          };
+          return next();
+        }
+        return res.status(401).json({ error: 'Usuário não encontrado' });
+      }
 
-    req.user = user;
-    next();
+      req.user = user;
+      next();
+    } catch (e) {
+      if (decoded.id && decoded.perfil) {
+        req.user = {
+          id: decoded.id,
+          perfil: decoded.perfil,
+          central_padrao: decoded.central || 'Todas',
+          nome: decoded.nome || 'Usuário'
+        };
+        return next();
+      }
+      return res.status(500).json({ error: 'Erro ao validar autenticação: ' + e.message });
+    }
   });
 }
 

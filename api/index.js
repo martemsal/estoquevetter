@@ -39,4 +39,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Global JSON error handler
+app.use((err, req, res, next) => {
+  console.error('Express Error Handler:', err);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    error: err.message || 'Erro interno no servidor'
+  });
+});
+
 module.exports = app;

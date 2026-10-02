@@ -33,8 +33,10 @@ export async function apiRequest(endpoint, options = {}) {
   });
 
   let data = {};
+  let rawText = '';
   try {
-    data = await response.json();
+    rawText = await response.text();
+    data = JSON.parse(rawText);
   } catch (_) {
     // Response may not be JSON
   }
@@ -44,9 +46,10 @@ export async function apiRequest(endpoint, options = {}) {
       throw new Error('A imagem capturada é muito pesada para envio. Foi aplicada uma compressão automática para as próximas.');
     }
     if (response.status === 401 || response.status === 403) {
-      throw new Error(data.error || data.message || 'Acesso restrito. Seu perfil atual não possui permissão para esta ação.');
+      throw new Error(data.error || data.message || 'Sessão expirada ou acesso restrito. Faça login novamente.');
     }
-    const errorMsg = data.error || data.message || `Erro no servidor (código ${response.status})`;
+    const cleanRaw = rawText && rawText.length < 250 && !rawText.includes('<html') ? rawText : null;
+    const errorMsg = data.error || data.message || cleanRaw || `Erro no servidor (código ${response.status})`;
     throw new Error(errorMsg);
   }
 
