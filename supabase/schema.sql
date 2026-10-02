@@ -107,13 +107,13 @@ END $$;
 -- operador123 -> $2a$10$1yZ4aB4sC6dE8fG0hI2jK.lM4nO6pQ8rS0tU2vW4xY6zA8bC0dE2f
 
 INSERT INTO usuarios (id, nome, email, senha, perfil, central_padrao) VALUES
-(1, 'Carlos Silva (Administrador)', 'admin@estoque.com', '$2a$10$mB5X.6pI0VdYy29wGk1NVeY03FqQf2vR1H7qKqK8hJm0nJb2y5Y5i', 'Administrador', 'Todas'),
-(2, 'Mariana Costa (Gerente C1)', 'gerente1@estoque.com', '$2a$10$7R905/R9.gqJcK7Bw1j2Ied0r1V9.i2fG7H8.j0K1L2M3N4O5P6Qi', 'Gerente', 'Central 1'),
-(3, 'Roberto Mendes (Gerente C2)', 'gerente2@estoque.com', '$2a$10$7R905/R9.gqJcK7Bw1j2Ied0r1V9.i2fG7H8.j0K1L2M3N4O5P6Qi', 'Gerente', 'Central 2'),
-(4, 'Fernanda Lima (Gerente C3)', 'gerente3@estoque.com', '$2a$10$7R905/R9.gqJcK7Bw1j2Ied0r1V9.i2fG7H8.j0K1L2M3N4O5P6Qi', 'Gerente', 'Central 3'),
-(5, 'Lucas Souza (Operador C1)', 'operador@estoque.com', '$2a$10$9K816/S0.hrKdM8Cx2k3Jfe1s2W0.j3gH8I9.k1L2M3N4O5P6Q7Rj', 'Operador', 'Central 1'),
-(6, 'Juliana Rocha (Operadora C2)', 'operador2@estoque.com', '$2a$10$9K816/S0.hrKdM8Cx2k3Jfe1s2W0.j3gH8I9.k1L2M3N4O5P6Q7Rj', 'Operador', 'Central 2')
-ON CONFLICT (email) DO NOTHING;
+(1, 'Carlos Silva (Administrador)', 'admin@estoque.com', '$2b$10$ul/b9l6yOGywY1A3mmnXRecAYMZmYrNpLGTPbudR9sUEjihBf83.6', 'Administrador', 'Todas'),
+(2, 'Mariana Costa (Gerente C1)', 'gerente1@estoque.com', '$2b$10$tmgVovG3E.UBbilffB2KaeeVZCHi4h9H/bDWQqIEayDsLyvEgPdya', 'Gerente', 'Central 1'),
+(3, 'Roberto Mendes (Gerente C2)', 'gerente2@estoque.com', '$2b$10$tmgVovG3E.UBbilffB2KaeeVZCHi4h9H/bDWQqIEayDsLyvEgPdya', 'Gerente', 'Central 2'),
+(4, 'Fernanda Lima (Gerente C3)', 'gerente3@estoque.com', '$2b$10$tmgVovG3E.UBbilffB2KaeeVZCHi4h9H/bDWQqIEayDsLyvEgPdya', 'Gerente', 'Central 3'),
+(5, 'Lucas Souza (Operador C1)', 'operador@estoque.com', '$2b$10$LZMJzrttiZPJcsBIBycsgeK4PtMKJ9/4ULSGFbTTT8FtcKm3JRP6a', 'Operador', 'Central 1'),
+(6, 'Juliana Rocha (Operadora C2)', 'operador2@estoque.com', '$2b$10$LZMJzrttiZPJcsBIBycsgeK4PtMKJ9/4ULSGFbTTT8FtcKm3JRP6a', 'Operador', 'Central 2')
+ON CONFLICT (email) DO UPDATE SET senha = EXCLUDED.senha;
 
 -- Produtos Iniciais
 INSERT INTO produtos (id, nome, codigo_barras, categoria, unidade_medida, foto_path, estoque_minimo) VALUES
