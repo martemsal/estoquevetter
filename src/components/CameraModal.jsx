@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, RefreshCw, X, Check, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { compressImage } from '../utils/imageCompressor';
 
 export default function CameraModal({ isOpen, onClose, onCapture }) {
   const videoRef = useRef(null);
@@ -67,21 +68,40 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
     setFacingMode(prev => (prev === 'environment' ? 'user' : 'environment'));
   };
 
-  const handleTakePhoto = () => {
+  const handleTakePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     setIsCapturing(true);
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    // Redimensionar para tamanho ideal de tablet/mobile (max 800px)
+    let targetWidth = video.videoWidth || 640;
+    let targetHeight = video.videoHeight || 480;
+    const maxDim = 800;
+    if (targetWidth > maxDim || targetHeight > maxDim) {
+      if (targetWidth > targetHeight) {
+        targetHeight = Math.round((targetHeight * maxDim) / targetWidth);
+        targetWidth = maxDim;
+      } else {
+        targetWidth = Math.round((targetWidth * maxDim) / targetHeight);
+        targetHeight = maxDim;
+      }
+    }
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
 
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    setPreviewImage(dataUrl);
+    try {
+      const rawDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      const compressed = await compressImage(rawDataUrl, 800, 800, 0.75);
+      setPreviewImage(compressed);
+    } catch (_) {
+      setPreviewImage(canvas.toDataURL('image/jpeg', 0.7));
+    }
     stopCamera();
 
     setTimeout(() => {
@@ -89,9 +109,13 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
     }, 200);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (previewImage) {
-      onCapture(previewImage);
+      let finalImg = previewImage;
+      try {
+        finalImg = await compressImage(previewImage, 800, 800, 0.75);
+      } catch (_) {}
+      onCapture(finalImg);
       onClose();
     }
   };
@@ -101,16 +125,17 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
     startCamera();
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      setPreviewImage(uploadEvent.target.result);
+    try {
+      const compressed = await compressImage(file, 800, 800, 0.75);
+      setPreviewImage(compressed);
       stopCamera();
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn('Erro ao processar arquivo de foto:', err);
+    }
   };
 
   if (!isOpen) return null;

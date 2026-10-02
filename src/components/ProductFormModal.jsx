@@ -17,6 +17,7 @@ import {
 import CameraModal from './CameraModal';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import { api } from '../utils/api';
+import { compressImage } from '../utils/imageCompressor';
 
 export default function ProductFormModal({ isOpen, onClose, onSave, editingProduct = null }) {
   const [nome, setNome] = useState('');
@@ -65,15 +66,16 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
     setCodigoBarras(`789${timestamp}${random}`);
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setFotoBase64(ev.target.result);
+    try {
+      const compressed = await compressImage(file, 800, 800, 0.75);
+      setFotoBase64(compressed);
       setExistingFotoPath('');
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn('Erro ao processar imagem:', err);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -87,6 +89,13 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
     setError(null);
 
     try {
+      let finalFoto = fotoBase64;
+      if (finalFoto && finalFoto.startsWith('data:image')) {
+        try {
+          finalFoto = await compressImage(finalFoto, 800, 800, 0.75);
+        } catch (_) {}
+      }
+
       const payload = {
         nome: nome.trim(),
         codigo_barras: codigoBarras.trim() || undefined,
@@ -95,7 +104,7 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
         estoque_minimo: estoqueMinimo,
         quantidade_inicial: quantidadeInicial,
         central_destino: centralDestino,
-        foto_base64: fotoBase64 || undefined
+        foto_base64: finalFoto || undefined
       };
 
       if (editingProduct) {

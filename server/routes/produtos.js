@@ -23,14 +23,28 @@ function saveBase64Image(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) {
     return null;
   }
-  const matches = base64Data.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-  if (!matches || matches.length < 3) return null;
-  const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-  const buffer = Buffer.from(matches[2], 'base64');
-  const filename = `prod_cam_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
-  const filePath = path.join(uploadsDir, filename);
-  fs.writeFileSync(filePath, buffer);
-  return `/uploads/${filename}`;
+  const isVercel = Boolean(process.env.VERCEL);
+  // On Vercel serverless, storing the compressed data URI directly in SQLite
+  // avoids ephemeral disk loss and guarantees images show on every request!
+  if (isVercel) {
+    return base64Data;
+  }
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const matches = base64Data.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+    if (!matches || matches.length < 3) return base64Data;
+    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    const filename = `prod_cam_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+    const filePath = path.join(uploadsDir, filename);
+    fs.writeFileSync(filePath, buffer);
+    return `/uploads/${filename}`;
+  } catch (err) {
+    console.warn('Aviso: gravando imagem como data URI:', err.message);
+    return base64Data;
+  }
 }
 
 // GET /api/produtos - List all products with per-central stock & alert flags

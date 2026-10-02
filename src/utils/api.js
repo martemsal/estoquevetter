@@ -32,10 +32,21 @@ export async function apiRequest(endpoint, options = {}) {
     headers,
   });
 
-  const data = await response.json().catch(() => ({}));
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (_) {
+    // Response may not be JSON
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || 'Erro na requisição');
+    if (response.status === 413) {
+      throw new Error('A imagem capturada é muito pesada para envio. Foi aplicada uma compressão automática para as próximas.');
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(data.error || 'Acesso restrito. Seu perfil atual não possui permissão para esta ação.');
+    }
+    throw new Error(data.error || `Erro no servidor (código ${response.status})`);
   }
 
   return data;
