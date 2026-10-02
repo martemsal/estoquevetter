@@ -51,9 +51,17 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan }) {
     setScannerError(null);
 
     const elem = document.getElementById(qrRegionId);
-    if (!elem) return;
-
     try {
+      try {
+        const k = 'HTML5_QRCODE_DATA';
+        const v = localStorage.getItem(k);
+        if (v) {
+          try { JSON.parse(v); } catch (_) { localStorage.removeItem(k); }
+        }
+      } catch (_) {}
+
+      if (!elem) return;
+
       const qrCode = new Html5Qrcode(qrRegionId, {
         formatsToSupport: [
           Html5QrcodeSupportedFormats.EAN_13,

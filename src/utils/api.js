@@ -1,15 +1,26 @@
 const BASE_URL = '/api';
 
 export function getStoredToken() {
-  return localStorage.getItem('vetter_token');
+  try {
+    const t = localStorage.getItem('vetter_token');
+    if (!t || t === '[object Object]' || t === 'undefined' || t === 'null') {
+      localStorage.removeItem('vetter_token');
+      return null;
+    }
+    return t;
+  } catch (_) {
+    return null;
+  }
 }
 
 export function setStoredToken(token) {
-  if (token) {
-    localStorage.setItem('vetter_token', token);
-  } else {
-    localStorage.removeItem('vetter_token');
-  }
+  try {
+    if (token && typeof token === 'string' && token !== '[object Object]') {
+      localStorage.setItem('vetter_token', token);
+    } else {
+      localStorage.removeItem('vetter_token');
+    }
+  } catch (_) {}
 }
 
 export async function apiRequest(endpoint, options = {}) {

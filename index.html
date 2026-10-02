@@ -11,6 +11,18 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <link rel="manifest" href="/manifest.json" />
     <title>Estoque Vetter | Tablet 3 Centrais</title>
+    <script>
+      try {
+        ['HTML5_QRCODE_DATA', 'vetter_token', 'user'].forEach(function(k) {
+          var v = localStorage.getItem(k);
+          if (v && (v === '[object Object]' || v === 'undefined' || v === 'null')) {
+            localStorage.removeItem(k);
+          } else if (k === 'HTML5_QRCODE_DATA' && v) {
+            try { JSON.parse(v); } catch(e) { localStorage.removeItem(k); }
+          }
+        });
+      } catch (e) {}
+    </script>
   </head>
   <body class="bg-slate-900 text-slate-100 min-h-screen selection:bg-sky-500 selection:text-white select-none" style="background-color: #0b1120; margin: 0; color: #f1f5f9;">
     <div id="root"></div>

@@ -1,3 +1,15 @@
+// Sanitizar chaves corrompidas no localStorage antes de inicializar React e html5-qrcode
+try {
+  ['HTML5_QRCODE_DATA', 'vetter_token', 'user'].forEach((k) => {
+    const v = localStorage.getItem(k);
+    if (v && (v === '[object Object]' || v === 'undefined' || v === 'null')) {
+      localStorage.removeItem(k);
+    } else if (k === 'HTML5_QRCODE_DATA' && v) {
+      try { JSON.parse(v); } catch (_) { localStorage.removeItem(k); }
+    }
+  });
+} catch (_) {}
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
