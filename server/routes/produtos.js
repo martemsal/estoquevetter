@@ -3,8 +3,9 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const { db, queryAll, queryOne, execute, uploadsDir } = require('../db');
+const { uploadsDir } = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const dataService = require('../dataService');
 
 // Multer setup for direct file uploads
 const storage = multer.diskStorage({
@@ -18,14 +19,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Helper to save base64 camera image
+// Helper to save base64 camera image (used in local SQLite fallback)
 function saveBase64Image(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) {
     return null;
   }
   const isVercel = Boolean(process.env.VERCEL);
-  // On Vercel serverless, storing the compressed data URI directly in SQLite
-  // avoids ephemeral disk loss and guarantees images show on every request!
   if (isVercel) {
     return base64Data;
   }
@@ -48,121 +47,32 @@ function saveBase64Image(base64Data) {
 }
 
 // GET /api/produtos - List all products with per-central stock & alert flags
-router.get('/', authenticateToken, (req, res) => {
-  const { central, categoria, alerta, busca } = req.query;
-
-  let sql = `
-    SELECT 
-      p.*,
-      COALESCE(c1.quantidade, 0) AS estoque_c1,
-      COALESCE(c2.quantidade, 0) AS estoque_c2,
-      COALESCE(c3.quantidade, 0) AS estoque_c3,
-      (COALESCE(c1.quantidade, 0) + COALESCE(c2.quantidade, 0) + COALESCE(c3.quantidade, 0)) AS estoque_total
-    FROM produtos p
-    LEFT JOIN estoque_centrais c1 ON p.id = c1.produto_id AND c1.central = 'Central 1'
-    LEFT JOIN estoque_centrais c2 ON p.id = c2.produto_id AND c2.central = 'Central 2'
-    LEFT JOIN estoque_centrais c3 ON p.id = c3.produto_id AND c3.central = 'Central 3'
-    WHERE 1=1
-  `;
-
-  const params = [];
-
-  if (busca) {
-    sql += ` AND (p.nome LIKE ? OR p.codigo_barras LIKE ? OR p.categoria LIKE ?)`;
-    const term = `%${busca}%`;
-    params.push(term, term, term);
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const produtos = await dataService.getProdutos(req.query);
+    res.json(produtos);
+  } catch (err) {
+    console.error('Erro ao listar produtos:', err);
+    res.status(500).json({ error: 'Erro ao carregar produtos: ' + err.message });
   }
-
-  if (categoria && categoria !== 'Todas') {
-    sql += ` AND p.categoria = ?`;
-    params.push(categoria);
-  }
-
-  sql += ` ORDER BY p.id DESC`;
-
-  const rows = queryAll(sql, params);
-
-  // Compute alert states
-  const results = rows.map(prod => {
-    const min = prod.estoque_minimo || 5;
-    const c1Low = prod.estoque_c1 <= min;
-    const c2Low = prod.estoque_c2 <= min;
-    const c3Low = prod.estoque_c3 <= min;
-    const totalLow = prod.estoque_total <= min;
-    const hasAnyLow = c1Low || c2Low || c3Low || totalLow;
-
-    let relevantStock = prod.estoque_total;
-    let relevantLow = hasAnyLow;
-
-    if (central === 'Central 1') {
-      relevantStock = prod.estoque_c1;
-      relevantLow = c1Low;
-    } else if (central === 'Central 2') {
-      relevantStock = prod.estoque_c2;
-      relevantLow = c2Low;
-    } else if (central === 'Central 3') {
-      relevantStock = prod.estoque_c3;
-      relevantLow = c3Low;
-    }
-
-    return {
-      ...prod,
-      alerta_c1: c1Low,
-      alerta_c2: c2Low,
-      alerta_c3: c3Low,
-      alerta_total: totalLow,
-      em_alerta: hasAnyLow,
-      estoque_relevante: relevantStock,
-      alerta_relevante: relevantLow
-    };
-  });
-
-  // Filter by alert if requested
-  const filtered = alerta === 'true'
-    ? results.filter(r => r.alerta_relevante)
-    : results;
-
-  res.json(filtered);
 });
 
-// GET /api/produtos/:id - Get single product detail with history
-router.get('/:id', authenticateToken, (req, res) => {
-  const prod = queryOne(`
-    SELECT 
-      p.*,
-      COALESCE(c1.quantidade, 0) AS estoque_c1,
-      COALESCE(c2.quantidade, 0) AS estoque_c2,
-      COALESCE(c3.quantidade, 0) AS estoque_c3,
-      (COALESCE(c1.quantidade, 0) + COALESCE(c2.quantidade, 0) + COALESCE(c3.quantidade, 0)) AS estoque_total
-    FROM produtos p
-    LEFT JOIN estoque_centrais c1 ON p.id = c1.produto_id AND c1.central = 'Central 1'
-    LEFT JOIN estoque_centrais c2 ON p.id = c2.produto_id AND c2.central = 'Central 2'
-    LEFT JOIN estoque_centrais c3 ON p.id = c3.produto_id AND c3.central = 'Central 3'
-    WHERE p.id = ?
-  `, [req.params.id]);
-
-  if (!prod) {
-    return res.status(404).json({ error: 'Produto não encontrado' });
+// GET /api/produtos/:id - Get Product Details + Stock
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const prod = await dataService.getProdutoById(req.params.id);
+    if (!prod) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+    res.json(prod);
+  } catch (err) {
+    console.error('Erro ao obter produto:', err);
+    res.status(500).json({ error: 'Erro interno ao consultar produto' });
   }
-
-  const historico = queryAll(`
-    SELECT m.*, u.nome AS usuario_nome
-    FROM movimentacoes m
-    JOIN usuarios u ON m.usuario_id = u.id
-    WHERE m.produto_id = ?
-    ORDER BY m.data_movimentacao DESC
-    LIMIT 20
-  `, [req.params.id]);
-
-  res.json({
-    ...prod,
-    em_alerta: (prod.estoque_c1 <= prod.estoque_minimo || prod.estoque_c2 <= prod.estoque_minimo || prod.estoque_c3 <= prod.estoque_minimo),
-    historico
-  });
 });
 
 // POST /api/produtos - Create Product (Gerente and Administrador)
-router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), upload.single('foto'), (req, res) => {
+router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), upload.single('foto'), async (req, res) => {
   try {
     const {
       nome,
@@ -179,91 +89,37 @@ router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), u
       return res.status(400).json({ error: 'Nome do produto é obrigatório' });
     }
 
-    let foto_path = '';
+    let finalFoto = foto_base64;
     if (req.file) {
-      foto_path = `/uploads/${req.file.filename}`;
-    } else if (foto_base64) {
-      foto_path = saveBase64Image(foto_base64) || '';
+      finalFoto = `/uploads/${req.file.filename}`;
     }
 
-    // Auto-generate barcode if blank
-    const barcode = codigo_barras && codigo_barras.trim()
-      ? codigo_barras.trim()
-      : `VET-${Date.now().toString().slice(-8)}`;
-
-    // Verify unique barcode
-    const existing = queryOne('SELECT id FROM produtos WHERE codigo_barras = ?', [barcode]);
-    if (existing) {
-      return res.status(400).json({ error: 'Código de barras já cadastrado em outro produto' });
-    }
-
-    const minStock = Number(estoque_minimo) >= 0 ? parseInt(estoque_minimo, 10) : 5;
-    const initialQty = Number(quantidade_inicial) > 0 ? parseInt(quantidade_inicial, 10) : 0;
-    const destino = ['Central 1', 'Central 2', 'Central 3'].includes(central_destino)
-      ? central_destino
-      : 'Central 1';
-
-    const insertProd = db.prepare(`
-      INSERT INTO produtos (nome, codigo_barras, categoria, unidade_medida, foto_path, estoque_minimo)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = insertProd.run(
-      nome.trim(),
-      barcode,
-      categoria || 'Outros',
-      unidade_medida || 'Unidade',
-      foto_path,
-      minStock
-    );
-
-    const newProdId = Number(result.lastInsertRowid);
-
-    // Initialize stock across all 3 Centrais
-    const insertStock = db.prepare(`
-      INSERT INTO estoque_centrais (produto_id, central, quantidade)
-      VALUES (?, ?, ?)
-    `);
-
-    insertStock.run(newProdId, 'Central 1', destino === 'Central 1' ? initialQty : 0);
-    insertStock.run(newProdId, 'Central 2', destino === 'Central 2' ? initialQty : 0);
-    insertStock.run(newProdId, 'Central 3', destino === 'Central 3' ? initialQty : 0);
-
-    // Register initial inflow movement if quantity > 0
-    if (initialQty > 0) {
-      const insertMov = db.prepare(`
-        INSERT INTO movimentacoes (produto_id, tipo, central, quantidade, usuario_id, observacao)
-        VALUES (?, 'ENTRADA', ?, ?, ?, ?)
-      `);
-      insertMov.run(
-        newProdId,
-        destino,
-        initialQty,
-        req.user.id,
-        `Entrada inicial de cadastro - ${destino}`
-      );
-    }
+    const result = await dataService.createProduto({
+      nome: nome.trim(),
+      codigo_barras,
+      categoria,
+      unidade_medida,
+      estoque_minimo,
+      quantidade_inicial,
+      central_destino,
+      foto_base64: finalFoto
+    }, req.user.id);
 
     res.status(201).json({
       message: 'Produto cadastrado com sucesso!',
-      id: newProdId,
-      codigo_barras: barcode
+      id: result.id,
+      codigo_barras: result.codigo_barras,
+      foto_path: result.foto_path
     });
   } catch (err) {
-    console.error('Erro ao cadastrar produto:', err);
-    res.status(500).json({ error: 'Erro interno ao salvar produto: ' + err.message });
+    console.error('Erro ao cadastrar produto:', err.message);
+    res.status(400).json({ error: err.message || 'Erro ao salvar produto' });
   }
 });
 
 // PUT /api/produtos/:id - Update Product (Gerente and Administrador)
-router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador']), upload.single('foto'), (req, res) => {
+router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador']), upload.single('foto'), async (req, res) => {
   try {
-    const prodId = req.params.id;
-    const prod = queryOne('SELECT * FROM produtos WHERE id = ?', [prodId]);
-    if (!prod) {
-      return res.status(404).json({ error: 'Produto não encontrado' });
-    }
-
     const {
       nome,
       codigo_barras,
@@ -273,67 +129,40 @@ router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador']),
       foto_base64
     } = req.body;
 
-    let foto_path = prod.foto_path;
+    let finalFoto = foto_base64;
     if (req.file) {
-      foto_path = `/uploads/${req.file.filename}`;
-    } else if (foto_base64) {
-      foto_path = saveBase64Image(foto_base64) || foto_path;
+      finalFoto = `/uploads/${req.file.filename}`;
     }
 
-    const barcode = codigo_barras && codigo_barras.trim() ? codigo_barras.trim() : prod.codigo_barras;
+    const updated = await dataService.updateProduto(req.params.id, {
+      nome,
+      codigo_barras,
+      categoria,
+      unidade_medida,
+      estoque_minimo,
+      foto_base64: finalFoto
+    });
 
-    // Check duplicate barcode
-    if (barcode !== prod.codigo_barras) {
-      const existing = queryOne('SELECT id FROM produtos WHERE codigo_barras = ? AND id != ?', [barcode, prodId]);
-      if (existing) {
-        return res.status(400).json({ error: 'Código de barras já está em uso por outro produto' });
-      }
-    }
-
-    const minStock = Number(estoque_minimo) >= 0 ? parseInt(estoque_minimo, 10) : prod.estoque_minimo;
-
-    const updateStmt = db.prepare(`
-      UPDATE produtos
-      SET nome = ?, codigo_barras = ?, categoria = ?, unidade_medida = ?, foto_path = ?, estoque_minimo = ?
-      WHERE id = ?
-    `);
-
-    updateStmt.run(
-      nome ? nome.trim() : prod.nome,
-      barcode,
-      categoria || prod.categoria,
-      unidade_medida || prod.unidade_medida,
-      foto_path,
-      minStock,
-      prodId
-    );
-
-    res.json({ message: 'Produto atualizado com sucesso!' });
+    res.json({
+      message: 'Produto atualizado com sucesso!',
+      produto: updated
+    });
   } catch (err) {
-    console.error('Erro ao atualizar produto:', err);
-    res.status(500).json({ error: 'Erro ao atualizar produto' });
+    console.error('Erro ao atualizar produto:', err.message);
+    res.status(400).json({ error: err.message || 'Erro ao atualizar produto' });
   }
 });
 
 // DELETE /api/produtos/:id - Delete Product (Administrador only)
-router.delete('/:id', authenticateToken, requireRole(['Administrador']), (req, res) => {
+router.delete('/:id', authenticateToken, requireRole(['Administrador']), async (req, res) => {
   try {
-    const prodId = req.params.id;
-    const prod = queryOne('SELECT * FROM produtos WHERE id = ?', [prodId]);
-    if (!prod) {
-      return res.status(404).json({ error: 'Produto não encontrado' });
-    }
-
-    // Cascade handles estoque_centrais, clean up movimentacoes
-    execute('DELETE FROM movimentacoes WHERE produto_id = ?', [prodId]);
-    execute('DELETE FROM estoque_centrais WHERE produto_id = ?', [prodId]);
-    execute('DELETE FROM produtos WHERE id = ?', [prodId]);
-
+    await dataService.deleteProduto(req.params.id);
     res.json({ message: 'Produto excluído com sucesso!' });
   } catch (err) {
-    console.error('Erro ao excluir produto:', err);
-    res.status(500).json({ error: 'Erro ao excluir produto' });
+    console.error('Erro ao excluir produto:', err.message);
+    res.status(500).json({ error: 'Erro ao excluir produto: ' + err.message });
   }
 });
 
 module.exports = router;
+module.exports.saveBase64Image = saveBase64Image;

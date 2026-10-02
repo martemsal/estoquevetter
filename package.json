@@ -20,6 +20,7 @@
     "node": ">=22.x"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "concurrently": "^10.0.5",
