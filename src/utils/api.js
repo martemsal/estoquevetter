@@ -44,9 +44,10 @@ export async function apiRequest(endpoint, options = {}) {
       throw new Error('A imagem capturada é muito pesada para envio. Foi aplicada uma compressão automática para as próximas.');
     }
     if (response.status === 401 || response.status === 403) {
-      throw new Error(data.error || 'Acesso restrito. Seu perfil atual não possui permissão para esta ação.');
+      throw new Error(data.error || data.message || 'Acesso restrito. Seu perfil atual não possui permissão para esta ação.');
     }
-    throw new Error(data.error || `Erro no servidor (código ${response.status})`);
+    const errorMsg = data.error || data.message || `Erro no servidor (código ${response.status})`;
+    throw new Error(errorMsg);
   }
 
   return data;
