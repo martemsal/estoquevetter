@@ -406,7 +406,7 @@ const dataService = {
           nome: nome.trim(),
           codigo_barras: barcode,
           categoria: categoria || 'Outros',
-          unidade_medida: unidadeMedida || 'Unidade',
+          unidade_medida: unidade_medida || 'Unidade',
           foto_path: foto_url,
           estoque_minimo: minStock
         }])
