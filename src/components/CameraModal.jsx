@@ -145,11 +145,12 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
               <AlertCircle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
               <p className="text-slate-300 text-sm mb-4">{cameraError}</p>
               <label className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-white cursor-pointer shadow-lg active:scale-95 transition">
-                <ImageIcon className="w-5 h-5" />
-                <span>Escolher Imagem do Tablet</span>
+                <Camera className="w-5 h-5" />
+                <span>Fotografar com a Câmera / Arquivo</span>
                 <input
                   type="file"
                   accept="image/*"
+                  capture="environment"
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -196,11 +197,12 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
             </>
           ) : (
             <>
-              <label className="p-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer active:scale-95 transition">
-                <ImageIcon className="w-6 h-6" />
+              <label className="p-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer active:scale-95 transition" title="Tirar foto ou escolher arquivo">
+                <Camera className="w-6 h-6 text-sky-400" />
                 <input
                   type="file"
                   accept="image/*"
+                  capture="environment"
                   onChange={handleFileUpload}
                   className="hidden"
                 />
