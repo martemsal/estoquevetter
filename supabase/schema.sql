@@ -54,6 +54,12 @@ CREATE INDEX IF NOT EXISTS idx_estoque_produto_central ON estoque_centrais(produ
 CREATE INDEX IF NOT EXISTS idx_movimentacoes_data ON movimentacoes(data_movimentacao DESC);
 CREATE INDEX IF NOT EXISTS idx_movimentacoes_central ON movimentacoes(central);
 
+-- Desativar Row Level Security (RLS) para permitir que a API do backend acerte leituras e escritas sem restrição
+ALTER TABLE usuarios DISABLE ROW LEVEL SECURITY;
+ALTER TABLE produtos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE estoque_centrais DISABLE ROW LEVEL SECURITY;
+ALTER TABLE movimentacoes DISABLE ROW LEVEL SECURITY;
+
 -- 5. Bucket de Storage para Fotos de Produtos
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('produtos-fotos', 'produtos-fotos', true)
