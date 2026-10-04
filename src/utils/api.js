@@ -73,6 +73,18 @@ export async function apiRequest(endpoint, options = {}) {
   return data;
 }
 
+function buildQueryString(params = {}) {
+  const cleanParams = {};
+  Object.keys(params || {}).forEach(key => {
+    const val = params[key];
+    if (val !== undefined && val !== null && val !== '' && val !== 'undefined' && val !== 'null') {
+      cleanParams[key] = val;
+    }
+  });
+  const qs = new URLSearchParams(cleanParams).toString();
+  return qs ? `?${qs}` : '';
+}
+
 export const api = {
   // Auth
   login: (email, senha) => apiRequest('/auth/login', {
@@ -88,8 +100,7 @@ export const api = {
 
   // Produtos
   getProdutos: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
-    return apiRequest(`/produtos?${qs}`);
+    return apiRequest(`/produtos${buildQueryString(params)}`);
   },
   getProduto: (id) => apiRequest(`/produtos/${id}`),
   createProduto: (payload) => apiRequest('/produtos', {
@@ -114,14 +125,12 @@ export const api = {
     body: JSON.stringify(payload),
   }),
   getMovimentacoes: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
-    return apiRequest(`/movimentacoes?${qs}`);
+    return apiRequest(`/movimentacoes${buildQueryString(params)}`);
   },
 
   // Dashboard
   getDashboard: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
-    return apiRequest(`/dashboard?${qs}`);
+    return apiRequest(`/dashboard${buildQueryString(params)}`);
   },
 
   // Usuarios (RBAC)

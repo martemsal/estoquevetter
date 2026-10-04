@@ -160,6 +160,11 @@ const dataService = {
   // PRODUTOS E ESTOQUE
   // ----------------------------------------------------------------------------
   async getProdutos({ central, categoria, alerta, busca } = {}) {
+    const cleanCentral = (central && central !== 'Todas' && central !== 'undefined' && central !== 'null') ? central.trim() : null;
+    const cleanCategoria = (categoria && categoria !== 'Todas' && categoria !== 'undefined' && categoria !== 'null') ? categoria.trim() : null;
+    const cleanBusca = (busca && busca !== 'undefined' && busca !== 'null') ? busca.trim() : null;
+    const cleanAlerta = (alerta === 'true' || alerta === true);
+
     if (isSupabaseConfigured()) {
       let query = supabase
         .from('produtos')
@@ -169,8 +174,8 @@ const dataService = {
         `)
         .order('id', { ascending: false });
 
-      if (categoria && categoria !== 'Todas') {
-        query = query.eq('categoria', categoria);
+      if (cleanCategoria) {
+        query = query.eq('categoria', cleanCategoria);
       }
 
       const { data, error } = await query;
@@ -199,7 +204,7 @@ const dataService = {
         let relevantStock = estoque_total;
         let relevantLow = hasAnyLow;
 
-        const normCentral = normalizeCentral(central);
+        const normCentral = normalizeCentral(cleanCentral);
         if (normCentral === 'Central Piçarras') {
           relevantStock = estoque_c1;
           relevantLow = c1Low;
@@ -241,8 +246,8 @@ const dataService = {
         };
       });
 
-      if (busca) {
-        const lower = busca.toLowerCase();
+      if (cleanBusca) {
+        const lower = cleanBusca.toLowerCase();
         list = list.filter(p => 
           (p.nome && p.nome.toLowerCase().includes(lower)) ||
           (p.codigo_barras && p.codigo_barras.toLowerCase().includes(lower)) ||
@@ -250,7 +255,7 @@ const dataService = {
         );
       }
 
-      if (alerta === 'true') {
+      if (cleanAlerta) {
         list = list.filter(p => p.em_alerta);
       }
 
@@ -274,14 +279,14 @@ const dataService = {
       WHERE 1=1
     `;
     const params = [];
-    if (busca) {
+    if (cleanBusca) {
       sql += ` AND (p.nome LIKE ? OR p.codigo_barras LIKE ? OR p.categoria LIKE ?)`;
-      const term = `%${busca}%`;
+      const term = `%${cleanBusca}%`;
       params.push(term, term, term);
     }
-    if (categoria && categoria !== 'Todas') {
+    if (cleanCategoria) {
       sql += ` AND p.categoria = ?`;
-      params.push(categoria);
+      params.push(cleanCategoria);
     }
     sql += ` ORDER BY p.id DESC`;
 

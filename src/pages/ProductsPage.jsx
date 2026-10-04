@@ -33,11 +33,18 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
   const fetchProdutos = async () => {
     setLoading(true);
     try {
-      const data = await api.getProdutos({
-        central: activeCentral,
-        categoria: categoryFilter !== 'Todas' ? categoryFilter : undefined,
-        busca: search || undefined
-      });
+      const params = {};
+      if (activeCentral && activeCentral !== 'Todas') {
+        params.central = activeCentral;
+      }
+      if (categoryFilter && categoryFilter !== 'Todas') {
+        params.categoria = categoryFilter;
+      }
+      if (search && search.trim()) {
+        params.busca = search.trim();
+      }
+
+      const data = await api.getProdutos(params);
       setProdutos(data);
     } catch (err) {
       showToast({ type: 'error', message: err.message || 'Erro ao carregar produtos' });
