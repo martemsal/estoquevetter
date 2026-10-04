@@ -130,7 +130,7 @@ router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador']),
       categoria,
       unidade_medida,
       estoque_minimo,
-      foto_base64: finalFoto
+      foto_base64
     });
 
     res.json({

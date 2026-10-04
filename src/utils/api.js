@@ -33,14 +33,20 @@ export async function apiRequest(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  let body = options.body;
+  if (body && !(body instanceof FormData) && typeof body === 'object') {
+    body = JSON.stringify(body);
+  }
+
   // If not FormData, default to application/json
-  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+  if (!(body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers,
+    body,
   });
 
   let data = {};
@@ -86,13 +92,13 @@ export const api = {
     return apiRequest(`/produtos?${qs}`);
   },
   getProduto: (id) => apiRequest(`/produtos/${id}`),
-  createProduto: (formData) => apiRequest('/produtos', {
+  createProduto: (payload) => apiRequest('/produtos', {
     method: 'POST',
-    body: formData,
+    body: payload instanceof FormData ? payload : JSON.stringify(payload),
   }),
-  updateProduto: (id, formData) => apiRequest(`/produtos/${id}`, {
+  updateProduto: (id, payload) => apiRequest(`/produtos/${id}`, {
     method: 'PUT',
-    body: formData,
+    body: payload instanceof FormData ? payload : JSON.stringify(payload),
   }),
   deleteProduto: (id) => apiRequest(`/produtos/${id}`, {
     method: 'DELETE',
