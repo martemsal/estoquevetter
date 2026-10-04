@@ -12,14 +12,15 @@ import {
   AlertTriangle,
   Building,
   Plus,
-  Minus
+  Minus,
+  Trash2
 } from 'lucide-react';
 import CameraModal from './CameraModal';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import { api } from '../utils/api';
 import { compressImage } from '../utils/imageCompressor';
 
-export default function ProductFormModal({ isOpen, onClose, onSave, editingProduct = null }) {
+export default function ProductFormModal({ isOpen, onClose, onSave, onDelete, editingProduct = null }) {
   const [nome, setNome] = useState('');
   const [codigoBarras, setCodigoBarras] = useState('');
   const [categoria, setCategoria] = useState('Embalagens');
@@ -33,6 +34,7 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -75,6 +77,28 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
       setExistingFotoPath('');
     } catch (err) {
       console.warn('Erro ao processar imagem:', err);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!editingProduct) return;
+    if (!window.confirm(`Tem certeza que deseja excluir o produto "${editingProduct.nome}"?\n\nEsta ação apagará o cadastro do produto e todo o seu histórico de estoque.`)) {
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+    try {
+      if (onDelete) {
+        await onDelete(editingProduct.id, editingProduct.nome);
+      } else {
+        await api.deleteProduto(editingProduct.id);
+      }
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Erro ao excluir produto');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -381,28 +405,47 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
             </div>
 
             {/* Submit Bar */}
-            <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="py-3 px-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm active:scale-95 transition"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="py-3 px-6 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm shadow-xl shadow-sky-600/30 flex items-center gap-2 active:scale-95 transition disabled:opacity-50"
-              >
-                {saving ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    <span>{editingProduct ? 'Salvar Alterações' : 'Cadastrar Produto'}</span>
-                  </>
-                )}
-              </button>
+            <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+              {editingProduct ? (
+                <button
+                  type="button"
+                  onClick={handleDeleteProduct}
+                  disabled={saving || deleting}
+                  className="py-3 px-4 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 font-bold text-sm flex items-center gap-2 active:scale-95 transition disabled:opacity-50"
+                  title="Excluir este produto cadastrado"
+                >
+                  {deleting ? (
+                    <div className="w-4 h-4 border-2 border-rose-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  <span>{deleting ? 'Excluindo...' : 'Excluir Produto'}</span>
+                </button>
+              ) : <div />}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="py-3 px-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm active:scale-95 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving || deleting}
+                  className="py-3 px-6 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm shadow-xl shadow-sky-600/30 flex items-center gap-2 active:scale-95 transition disabled:opacity-50"
+                >
+                  {saving ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>{editingProduct ? 'Salvar Alterações' : 'Cadastrar Produto'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </form>
         </div>

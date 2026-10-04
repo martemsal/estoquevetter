@@ -685,12 +685,22 @@ const dataService = {
   },
 
   async deleteProduto(id) {
+    const numId = Number(id);
     if (isSupabaseConfigured()) {
-      const { error } = await supabase.from('produtos').delete().eq('id', id);
+      // 1. Excluir movimentações vinculadas
+      await supabase.from('movimentacoes').delete().eq('produto_id', numId);
+      // 2. Excluir estoque das centrais
+      await supabase.from('estoque_centrais').delete().eq('produto_id', numId);
+      // 3. Excluir o registro principal do produto
+      const { error } = await supabase.from('produtos').delete().eq('id', numId);
       if (error) throw error;
       return true;
     }
-    db.prepare('DELETE FROM produtos WHERE id = ?').run(id);
+
+    // SQLite
+    db.prepare('DELETE FROM movimentacoes WHERE produto_id = ?').run(numId);
+    db.prepare('DELETE FROM estoque_centrais WHERE produto_id = ?').run(numId);
+    db.prepare('DELETE FROM produtos WHERE id = ?').run(numId);
     return true;
   },
 

@@ -89,7 +89,8 @@ export function AuthProvider({ children }) {
   const isAdmin = user?.perfil === 'Administrador';
 
   // Role permissions
-  const canEditProducts = isAdmin || isGerente;
+  const canEditProducts = !!user; // Todos os operadores, gerentes e administradores podem cadastrar/editar
+  const canDeleteProducts = !!user; // Opção de excluir itens cadastrados disponível para todos os perfis autorizados
   const canManageUsers = isAdmin;
 
   return (
@@ -108,6 +109,7 @@ export function AuthProvider({ children }) {
         isGerente,
         isAdmin,
         canEditProducts,
+        canDeleteProducts,
         canManageUsers,
       }}
     >

@@ -56,10 +56,10 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
   };
 
   const handleDelete = async (id, nome) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o produto "${nome}"?`)) return;
+    if (!window.confirm(`Tem certeza que deseja excluir o produto "${nome}"?\n\nEsta ação apagará o cadastro do produto e todo o seu histórico de estoque.`)) return;
     try {
       await api.deleteProduto(id);
-      showToast({ type: 'success', message: 'Produto excluído com sucesso!' });
+      showToast({ type: 'success', message: `Produto "${nome}" excluído com sucesso!` });
       fetchProdutos();
     } catch (err) {
       showToast({ type: 'error', message: err.message || 'Erro ao excluir produto' });
@@ -82,7 +82,7 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
               Catálogo de Produtos & Estoque
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
-              Visualização consolidada de estoque nas 3 Centrais de Vendas
+              Visualização consolidada de estoque nas 4 Centrais: Piçarras, Penha, Armação e Rentter
             </p>
           </div>
         </div>
@@ -312,7 +312,7 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
                   </div>
 
                   {canEditProducts && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleEdit(prod)}
                         className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 active:scale-95 transition"
@@ -321,15 +321,13 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
                         <Edit3 className="w-4 h-4" />
                       </button>
 
-                      {isAdmin && (
-                        <button
-                          onClick={() => handleDelete(prod.id, prod.nome)}
-                          className="p-2.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-700 active:scale-95 transition"
-                          title="Excluir Produto"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleDelete(prod.id, prod.nome)}
+                        className="p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 active:scale-95 transition"
+                        title="Excluir Produto"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -420,12 +418,22 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
                           Repor
                         </button>
                         {canEditProducts && (
-                          <button
-                            onClick={() => handleEdit(prod)}
-                            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleEdit(prod)}
+                              className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                              title="Editar Produto"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(prod.id, prod.nome)}
+                              className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 transition"
+                              title="Excluir Produto"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -448,6 +456,7 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
             message: editingProduct ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!'
           });
         }}
+        onDelete={handleDelete}
         editingProduct={editingProduct}
       />
 

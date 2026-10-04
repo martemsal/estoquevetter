@@ -71,8 +71,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/produtos - Create Product (Gerente and Administrador)
-router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), async (req, res) => {
+// POST /api/produtos - Create Product
+router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador', 'Operador']), async (req, res) => {
   try {
     const {
       nome,
@@ -112,8 +112,8 @@ router.post('/', authenticateToken, requireRole(['Gerente', 'Administrador']), a
   }
 });
 
-// PUT /api/produtos/:id - Update Product (Gerente and Administrador)
-router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador']), async (req, res) => {
+// PUT /api/produtos/:id - Update Product
+router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador', 'Operador']), async (req, res) => {
   try {
     const {
       nome,
@@ -143,8 +143,8 @@ router.put('/:id', authenticateToken, requireRole(['Gerente', 'Administrador']),
   }
 });
 
-// DELETE /api/produtos/:id - Delete Product (Administrador only)
-router.delete('/:id', authenticateToken, requireRole(['Administrador']), async (req, res) => {
+// DELETE /api/produtos/:id - Delete Product
+router.delete('/:id', authenticateToken, requireRole(['Gerente', 'Administrador', 'Operador']), async (req, res) => {
   try {
     await dataService.deleteProduto(req.params.id);
     res.json({ message: 'Produto excluído com sucesso!' });
