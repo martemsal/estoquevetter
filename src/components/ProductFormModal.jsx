@@ -26,7 +26,7 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
   const [unidadeMedida, setUnidadeMedida] = useState('Unidade');
   const [quantidadeInicial, setQuantidadeInicial] = useState(10);
   const [estoqueMinimo, setEstoqueMinimo] = useState(5);
-  const [centralDestino, setCentralDestino] = useState('Central 1');
+  const [centralDestino, setCentralDestino] = useState('Central Piçarras');
   const [fotoBase64, setFotoBase64] = useState('');
   const [existingFotoPath, setExistingFotoPath] = useState('');
 
@@ -51,7 +51,7 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
       setUnidadeMedida('Unidade');
       setQuantidadeInicial(10);
       setEstoqueMinimo(5);
-      setCentralDestino('Central 1');
+      setCentralDestino('Central Piçarras');
       setFotoBase64('');
       setExistingFotoPath('');
     }
@@ -124,7 +124,7 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
 
   const categorias = ['Ferramentas', 'Insumos', 'Embalagens', 'Eletrônicos', 'Outros'];
   const unidades = ['Unidade', 'Caixa', 'Kg', 'Litro', 'Metro'];
-  const centrais = ['Central 1', 'Central 2', 'Central 3'];
+  const centrais = ['Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter'];
 
   return (
     <>

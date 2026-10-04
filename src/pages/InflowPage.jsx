@@ -24,7 +24,7 @@ export default function InflowPage({ preselectedProduct = null, onClearPreselect
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const [targetCentral, setTargetCentral] = useState(
-    ['Central 1', 'Central 2', 'Central 3'].includes(activeCentral) ? activeCentral : 'Central 1'
+    ['Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter'].includes(activeCentral) ? activeCentral : 'Central Piçarras'
   );
   const [quantidade, setQuantidade] = useState(10);
   const [observacao, setObservacao] = useState('');
@@ -56,8 +56,9 @@ export default function InflowPage({ preselectedProduct = null, onClearPreselect
   }, [preselectedProduct]);
 
   useEffect(() => {
-    if (['Central 1', 'Central 2', 'Central 3'].includes(activeCentral)) {
-      setTargetCentral(activeCentral);
+    const norm = activeCentral === 'Central 1' ? 'Central Piçarras' : activeCentral === 'Central 2' ? 'Central Penha' : activeCentral === 'Central 3' ? 'Central Armação' : activeCentral;
+    if (['Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter'].includes(norm)) {
+      setTargetCentral(norm);
     }
   }, [activeCentral]);
 
@@ -278,8 +279,8 @@ export default function InflowPage({ preselectedProduct = null, onClearPreselect
                 <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
                   2. Central de Destino da Entrada
                 </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {['Central 1', 'Central 2', 'Central 3'].map(c => (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {['Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter'].map(c => (
                     <button
                       key={c}
                       type="button"

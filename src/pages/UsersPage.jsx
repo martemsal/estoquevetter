@@ -30,7 +30,7 @@ export default function UsersPage({ showToast }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [perfil, setPerfil] = useState('Operador');
-  const [centralPadrao, setCentralPadrao] = useState('Central 1');
+  const [centralPadrao, setCentralPadrao] = useState('Central Piçarras');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
 
@@ -56,7 +56,7 @@ export default function UsersPage({ showToast }) {
     setEmail('');
     setSenha('');
     setPerfil('Operador');
-    setCentralPadrao('Central 1');
+    setCentralPadrao('Central Piçarras');
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -67,7 +67,7 @@ export default function UsersPage({ showToast }) {
     setEmail(u.email);
     setSenha('');
     setPerfil(u.perfil);
-    setCentralPadrao(u.central_padrao || 'Central 1');
+    setCentralPadrao(u.central_padrao || 'Central Piçarras');
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -378,9 +378,10 @@ export default function UsersPage({ showToast }) {
                     className="w-full px-3 py-3 bg-slate-950 border border-slate-700 rounded-2xl text-white text-sm focus:outline-none focus:border-purple-500 disabled:opacity-50"
                   >
                     <option value="Todas">Todas (Admin)</option>
-                    <option value="Central 1">Central 1</option>
-                    <option value="Central 2">Central 2</option>
-                    <option value="Central 3">Central 3</option>
+                    <option value="Central Piçarras">Central Piçarras</option>
+                    <option value="Central Penha">Central Penha</option>
+                    <option value="Central Armação">Central Armação</option>
+                    <option value="Rentter">Rentter</option>
                   </select>
                 </div>
               </div>

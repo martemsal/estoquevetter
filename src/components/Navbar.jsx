@@ -45,9 +45,10 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
   const centrais = [
     { id: 'Todas', label: 'Todas as Centrais', color: 'bg-slate-800 text-slate-200 border-slate-700' },
-    { id: 'Central 1', label: 'Central 1', color: 'bg-blue-900/40 text-blue-300 border-blue-500/50' },
-    { id: 'Central 2', label: 'Central 2', color: 'bg-emerald-900/40 text-emerald-300 border-emerald-500/50' },
-    { id: 'Central 3', label: 'Central 3', color: 'bg-purple-900/40 text-purple-300 border-purple-500/50' },
+    { id: 'Central Piçarras', label: 'Central Piçarras', color: 'bg-blue-900/40 text-blue-300 border-blue-500/50' },
+    { id: 'Central Penha', label: 'Central Penha', color: 'bg-emerald-900/40 text-emerald-300 border-emerald-500/50' },
+    { id: 'Central Armação', label: 'Central Armação', color: 'bg-purple-900/40 text-purple-300 border-purple-500/50' },
+    { id: 'Rentter', label: 'Rentter', color: 'bg-amber-900/40 text-amber-300 border-amber-500/50' },
   ];
 
   const getRoleBadge = (perfil) => {
@@ -79,7 +80,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
                 <span className="font-extrabold text-base sm:text-lg tracking-tight text-white">ESTOQUE</span>
                 <span className="font-light text-base sm:text-lg text-sky-400">VETTER</span>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800">
-                  3 Centrais
+                  4 Centrais
                 </span>
               </div>
               <div className="text-[11px] text-slate-400 hidden sm:block">
@@ -91,7 +92,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
           {/* Central Selector Pills (Responsive for tablet touch) */}
           <div className="hidden md:flex items-center gap-1.5 p-1 bg-slate-950/80 rounded-2xl border border-slate-800">
             {centrais.map(c => {
-              const isSelected = activeCentral === c.id;
+              const isSelected = activeCentral === c.id || (activeCentral === 'Central 1' && c.id === 'Central Piçarras') || (activeCentral === 'Central 2' && c.id === 'Central Penha') || (activeCentral === 'Central 3' && c.id === 'Central Armação');
               return (
                 <button
                   key={c.id}
@@ -104,12 +105,14 @@ export default function Navbar({ activeTab, setActiveTab }) {
                 >
                   <span
                     className={`w-2 h-2 rounded-full ${
-                      c.id === 'Central 1'
+                      c.id === 'Central Piçarras'
                         ? 'bg-blue-500'
-                        : c.id === 'Central 2'
+                        : c.id === 'Central Penha'
                         ? 'bg-emerald-500'
-                        : c.id === 'Central 3'
+                        : c.id === 'Central Armação'
                         ? 'bg-purple-500'
+                        : c.id === 'Rentter'
+                        ? 'bg-amber-500'
                         : 'bg-slate-400'
                     }`}
                   />
@@ -230,7 +233,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
         {/* Mobile / Tablet Portrait Central Selector bar */}
         <div className="flex md:hidden items-center justify-between gap-1 mt-2 pt-2 border-t border-slate-800/80 overflow-x-auto">
           {centrais.map(c => {
-            const isSelected = activeCentral === c.id;
+            const isSelected = activeCentral === c.id || (activeCentral === 'Central 1' && c.id === 'Central Piçarras') || (activeCentral === 'Central 2' && c.id === 'Central Penha') || (activeCentral === 'Central 3' && c.id === 'Central Armação');
             return (
               <button
                 key={c.id}

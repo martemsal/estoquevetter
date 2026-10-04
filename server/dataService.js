@@ -6,8 +6,41 @@ const bcrypt = require('bcryptjs');
 // DATA SERVICE: Camada Unificada com suporte dinâmico a Supabase ou SQLite
 // ==============================================================================
 
+const NORMALIZE_CENTRAL = {
+  'Central 1': 'Central Piçarras',
+  'Central 01': 'Central Piçarras',
+  'Central 2': 'Central Penha',
+  'Central 02': 'Central Penha',
+  'Central 3': 'Central Armação',
+  'Central 03': 'Central Armação',
+};
+
+const TO_LEGACY_CENTRAL = {
+  'Central Piçarras': 'Central 1',
+  'Central Penha': 'Central 2',
+  'Central Armação': 'Central 3',
+};
+
+function toLegacyCentral(c) {
+  return TO_LEGACY_CENTRAL[c] || c;
+}
+
+function normalizeCentral(c) {
+  if (!c) return c;
+  return NORMALIZE_CENTRAL[c] || c;
+}
+
+const ALL_CENTRAIS = [
+  'Central Piçarras',
+  'Central Penha',
+  'Central Armação',
+  'Rentter'
+];
+
 const dataService = {
   isSupabase: isSupabaseConfigured,
+  normalizeCentral,
+  ALL_CENTRAIS,
 
   // ----------------------------------------------------------------------------
   // AUTENTICAÇÃO E USUÁRIOS
@@ -126,7 +159,7 @@ const dataService = {
   // ----------------------------------------------------------------------------
   // PRODUTOS E ESTOQUE
   // ----------------------------------------------------------------------------
-  async getProdutos({ central, categoria, alerta, busca }) {
+  async getProdutos({ central, categoria, alerta, busca } = {}) {
     if (isSupabaseConfigured()) {
       let query = supabase
         .from('produtos')
@@ -144,34 +177,41 @@ const dataService = {
       if (error) throw error;
 
       let list = (data || []).map(p => {
-        const c1Obj = p.estoque_centrais?.find(ec => ec.central === 'Central 1');
-        const c2Obj = p.estoque_centrais?.find(ec => ec.central === 'Central 2');
-        const c3Obj = p.estoque_centrais?.find(ec => ec.central === 'Central 3');
+        const c1Obj = p.estoque_centrais?.find(ec => ec.central === 'Central Piçarras' || ec.central === 'Central 1' || ec.central === 'Central 01');
+        const c2Obj = p.estoque_centrais?.find(ec => ec.central === 'Central Penha' || ec.central === 'Central 2' || ec.central === 'Central 02');
+        const c3Obj = p.estoque_centrais?.find(ec => ec.central === 'Central Armação' || ec.central === 'Central 3' || ec.central === 'Central 03');
+        const c4Obj = p.estoque_centrais?.find(ec => ec.central === 'Rentter');
 
         const estoque_c1 = c1Obj ? Number(c1Obj.quantidade) : 0;
         const estoque_c2 = c2Obj ? Number(c2Obj.quantidade) : 0;
         const estoque_c3 = c3Obj ? Number(c3Obj.quantidade) : 0;
-        const estoque_total = estoque_c1 + estoque_c2 + estoque_c3;
+        const estoque_c4 = c4Obj ? Number(c4Obj.quantidade) : 0;
+        const estoque_total = estoque_c1 + estoque_c2 + estoque_c3 + estoque_c4;
 
         const min = p.estoque_minimo || 5;
         const c1Low = estoque_c1 <= min;
         const c2Low = estoque_c2 <= min;
         const c3Low = estoque_c3 <= min;
+        const c4Low = estoque_c4 <= min;
         const totalLow = estoque_total <= min;
-        const hasAnyLow = c1Low || c2Low || c3Low || totalLow;
+        const hasAnyLow = c1Low || c2Low || c3Low || c4Low || totalLow;
 
         let relevantStock = estoque_total;
         let relevantLow = hasAnyLow;
 
-        if (central === 'Central 1') {
+        const normCentral = normalizeCentral(central);
+        if (normCentral === 'Central Piçarras') {
           relevantStock = estoque_c1;
           relevantLow = c1Low;
-        } else if (central === 'Central 2') {
+        } else if (normCentral === 'Central Penha') {
           relevantStock = estoque_c2;
           relevantLow = c2Low;
-        } else if (central === 'Central 3') {
+        } else if (normCentral === 'Central Armação') {
           relevantStock = estoque_c3;
           relevantLow = c3Low;
+        } else if (normCentral === 'Rentter') {
+          relevantStock = estoque_c4;
+          relevantLow = c4Low;
         }
 
         return {
@@ -186,12 +226,18 @@ const dataService = {
           estoque_c1,
           estoque_c2,
           estoque_c3,
+          estoque_c4,
+          estoque_picarras: estoque_c1,
+          estoque_penha: estoque_c2,
+          estoque_armacao: estoque_c3,
+          estoque_rentter: estoque_c4,
           estoque_total,
           estoque_selecionado: relevantStock,
           em_alerta: relevantLow,
           alerta_c1: c1Low,
           alerta_c2: c2Low,
-          alerta_c3: c3Low
+          alerta_c3: c3Low,
+          alerta_c4: c4Low
         };
       });
 
@@ -218,11 +264,13 @@ const dataService = {
         COALESCE(c1.quantidade, 0) AS estoque_c1,
         COALESCE(c2.quantidade, 0) AS estoque_c2,
         COALESCE(c3.quantidade, 0) AS estoque_c3,
-        (COALESCE(c1.quantidade, 0) + COALESCE(c2.quantidade, 0) + COALESCE(c3.quantidade, 0)) AS estoque_total
+        COALESCE(c4.quantidade, 0) AS estoque_c4,
+        (COALESCE(c1.quantidade, 0) + COALESCE(c2.quantidade, 0) + COALESCE(c3.quantidade, 0) + COALESCE(c4.quantidade, 0)) AS estoque_total
       FROM produtos p
-      LEFT JOIN estoque_centrais c1 ON p.id = c1.produto_id AND c1.central = 'Central 1'
-      LEFT JOIN estoque_centrais c2 ON p.id = c2.produto_id AND c2.central = 'Central 2'
-      LEFT JOIN estoque_centrais c3 ON p.id = c3.produto_id AND c3.central = 'Central 3'
+      LEFT JOIN estoque_centrais c1 ON p.id = c1.produto_id AND (c1.central = 'Central Piçarras' OR c1.central = 'Central 1')
+      LEFT JOIN estoque_centrais c2 ON p.id = c2.produto_id AND (c2.central = 'Central Penha' OR c2.central = 'Central 2')
+      LEFT JOIN estoque_centrais c3 ON p.id = c3.produto_id AND (c3.central = 'Central Armação' OR c3.central = 'Central 3')
+      LEFT JOIN estoque_centrais c4 ON p.id = c4.produto_id AND c4.central = 'Rentter'
       WHERE 1=1
     `;
     const params = [];
@@ -243,30 +291,40 @@ const dataService = {
       const c1Low = prod.estoque_c1 <= min;
       const c2Low = prod.estoque_c2 <= min;
       const c3Low = prod.estoque_c3 <= min;
+      const c4Low = prod.estoque_c4 <= min;
       const totalLow = prod.estoque_total <= min;
-      const hasAnyLow = c1Low || c2Low || c3Low || totalLow;
+      const hasAnyLow = c1Low || c2Low || c3Low || c4Low || totalLow;
 
       let relevantStock = prod.estoque_total;
       let relevantLow = hasAnyLow;
 
-      if (central === 'Central 1') {
+      const normCentral = normalizeCentral(central);
+      if (normCentral === 'Central Piçarras') {
         relevantStock = prod.estoque_c1;
         relevantLow = c1Low;
-      } else if (central === 'Central 2') {
+      } else if (normCentral === 'Central Penha') {
         relevantStock = prod.estoque_c2;
         relevantLow = c2Low;
-      } else if (central === 'Central 3') {
+      } else if (normCentral === 'Central Armação') {
         relevantStock = prod.estoque_c3;
         relevantLow = c3Low;
+      } else if (normCentral === 'Rentter') {
+        relevantStock = prod.estoque_c4;
+        relevantLow = c4Low;
       }
 
       return {
         ...prod,
+        estoque_picarras: prod.estoque_c1,
+        estoque_penha: prod.estoque_c2,
+        estoque_armacao: prod.estoque_c3,
+        estoque_rentter: prod.estoque_c4,
         estoque_selecionado: relevantStock,
         em_alerta: relevantLow,
         alerta_c1: c1Low,
         alerta_c2: c2Low,
-        alerta_c3: c3Low
+        alerta_c3: c3Low,
+        alerta_c4: c4Low
       };
     });
 
@@ -289,14 +347,16 @@ const dataService = {
 
       if (error || !p) return null;
 
-      const c1Obj = p.estoque_centrais?.find(ec => ec.central === 'Central 1');
-      const c2Obj = p.estoque_centrais?.find(ec => ec.central === 'Central 2');
-      const c3Obj = p.estoque_centrais?.find(ec => ec.central === 'Central 3');
+      const c1Obj = p.estoque_centrais?.find(ec => ec.central === 'Central Piçarras' || ec.central === 'Central 1' || ec.central === 'Central 01');
+      const c2Obj = p.estoque_centrais?.find(ec => ec.central === 'Central Penha' || ec.central === 'Central 2' || ec.central === 'Central 02');
+      const c3Obj = p.estoque_centrais?.find(ec => ec.central === 'Central Armação' || ec.central === 'Central 3' || ec.central === 'Central 03');
+      const c4Obj = p.estoque_centrais?.find(ec => ec.central === 'Rentter');
 
       const estoque_c1 = c1Obj ? Number(c1Obj.quantidade) : 0;
       const estoque_c2 = c2Obj ? Number(c2Obj.quantidade) : 0;
       const estoque_c3 = c3Obj ? Number(c3Obj.quantidade) : 0;
-      const estoque_total = estoque_c1 + estoque_c2 + estoque_c3;
+      const estoque_c4 = c4Obj ? Number(c4Obj.quantidade) : 0;
+      const estoque_total = estoque_c1 + estoque_c2 + estoque_c3 + estoque_c4;
 
       // Historico
       const { data: hist } = await supabase
@@ -319,8 +379,13 @@ const dataService = {
         estoque_c1,
         estoque_c2,
         estoque_c3,
+        estoque_c4,
+        estoque_picarras: estoque_c1,
+        estoque_penha: estoque_c2,
+        estoque_armacao: estoque_c3,
+        estoque_rentter: estoque_c4,
         estoque_total,
-        em_alerta: (estoque_c1 <= p.estoque_minimo || estoque_c2 <= p.estoque_minimo || estoque_c3 <= p.estoque_minimo),
+        em_alerta: (estoque_c1 <= p.estoque_minimo || estoque_c2 <= p.estoque_minimo || estoque_c3 <= p.estoque_minimo || estoque_c4 <= p.estoque_minimo),
         historico
       };
     }
@@ -332,11 +397,13 @@ const dataService = {
         COALESCE(c1.quantidade, 0) AS estoque_c1,
         COALESCE(c2.quantidade, 0) AS estoque_c2,
         COALESCE(c3.quantidade, 0) AS estoque_c3,
-        (COALESCE(c1.quantidade, 0) + COALESCE(c2.quantidade, 0) + COALESCE(c3.quantidade, 0)) AS estoque_total
+        COALESCE(c4.quantidade, 0) AS estoque_c4,
+        (COALESCE(c1.quantidade, 0) + COALESCE(c2.quantidade, 0) + COALESCE(c3.quantidade, 0) + COALESCE(c4.quantidade, 0)) AS estoque_total
       FROM produtos p
-      LEFT JOIN estoque_centrais c1 ON p.id = c1.produto_id AND c1.central = 'Central 1'
-      LEFT JOIN estoque_centrais c2 ON p.id = c2.produto_id AND c2.central = 'Central 2'
-      LEFT JOIN estoque_centrais c3 ON p.id = c3.produto_id AND c3.central = 'Central 3'
+      LEFT JOIN estoque_centrais c1 ON p.id = c1.produto_id AND (c1.central = 'Central Piçarras' OR c1.central = 'Central 1')
+      LEFT JOIN estoque_centrais c2 ON p.id = c2.produto_id AND (c2.central = 'Central Penha' OR c2.central = 'Central 2')
+      LEFT JOIN estoque_centrais c3 ON p.id = c3.produto_id AND (c3.central = 'Central Armação' OR c3.central = 'Central 3')
+      LEFT JOIN estoque_centrais c4 ON p.id = c4.produto_id AND c4.central = 'Rentter'
       WHERE p.id = ?
     `, [id]);
 
@@ -351,9 +418,22 @@ const dataService = {
       LIMIT 20
     `, [id]);
 
+    const c1Low = prod.estoque_c1 <= prod.estoque_minimo;
+    const c2Low = prod.estoque_c2 <= prod.estoque_minimo;
+    const c3Low = prod.estoque_c3 <= prod.estoque_minimo;
+    const c4Low = prod.estoque_c4 <= prod.estoque_minimo;
+
     return {
       ...prod,
-      em_alerta: (prod.estoque_c1 <= prod.estoque_minimo || prod.estoque_c2 <= prod.estoque_minimo || prod.estoque_c3 <= prod.estoque_minimo),
+      estoque_picarras: prod.estoque_c1,
+      estoque_penha: prod.estoque_c2,
+      estoque_armacao: prod.estoque_c3,
+      estoque_rentter: prod.estoque_c4,
+      alerta_c1: c1Low,
+      alerta_c2: c2Low,
+      alerta_c3: c3Low,
+      alerta_c4: c4Low,
+      em_alerta: (c1Low || c2Low || c3Low || c4Low),
       historico
     };
   },
@@ -377,9 +457,8 @@ const dataService = {
 
     const minStock = Number(estoque_minimo) >= 0 ? parseInt(estoque_minimo, 10) : 5;
     const initialQty = Number(quantidade_inicial) > 0 ? parseInt(quantidade_inicial, 10) : 0;
-    const destino = ['Central 1', 'Central 2', 'Central 3'].includes(central_destino)
-      ? central_destino
-      : 'Central 1';
+    const normDestino = normalizeCentral(central_destino);
+    const destino = ALL_CENTRAIS.includes(normDestino) ? normDestino : 'Central Piçarras';
 
     if (isSupabaseConfigured()) {
       // 1. Verificar duplicidade de código de barras
@@ -417,19 +496,35 @@ const dataService = {
 
       const newProdId = newProd.id;
 
-      // 4. Inserir estoque nas 3 centrais
-      await supabase.from('estoque_centrais').insert([
-        { produto_id: newProdId, central: 'Central 1', quantidade: destino === 'Central 1' ? initialQty : 0 },
-        { produto_id: newProdId, central: 'Central 2', quantidade: destino === 'Central 2' ? initialQty : 0 },
-        { produto_id: newProdId, central: 'Central 3', quantidade: destino === 'Central 3' ? initialQty : 0 },
-      ]);
+      // 4. Inserir estoque nas 4 centrais (com fallback gracioso caso a constraint do Supabase ainda seja a antiga)
+      const stockPayload = [
+        { produto_id: newProdId, central: 'Central Piçarras', quantidade: destino === 'Central Piçarras' ? initialQty : 0 },
+        { produto_id: newProdId, central: 'Central Penha', quantidade: destino === 'Central Penha' ? initialQty : 0 },
+        { produto_id: newProdId, central: 'Central Armação', quantidade: destino === 'Central Armação' ? initialQty : 0 },
+        { produto_id: newProdId, central: 'Rentter', quantidade: destino === 'Rentter' ? initialQty : 0 },
+      ];
+
+      const { error: stockInsertErr } = await supabase.from('estoque_centrais').insert(stockPayload);
+      if (stockInsertErr) {
+        if (stockInsertErr.code === '23514') {
+          console.warn('Supabase ainda possui constraint antiga de 3 centrais. Inserindo com nomes legados temporariamente...');
+          const legacyDest = toLegacyCentral(destino);
+          await supabase.from('estoque_centrais').insert([
+            { produto_id: newProdId, central: 'Central 1', quantidade: legacyDest === 'Central 1' ? initialQty : 0 },
+            { produto_id: newProdId, central: 'Central 2', quantidade: legacyDest === 'Central 2' ? initialQty : 0 },
+            { produto_id: newProdId, central: 'Central 3', quantidade: legacyDest === 'Central 3' ? initialQty : 0 },
+          ]);
+        } else {
+          throw stockInsertErr;
+        }
+      }
 
       // 5. Registrar movimentação de entrada inicial se quantidade > 0
       if (initialQty > 0) {
         let validUserId = Number(userId);
         if (!validUserId || isNaN(validUserId)) validUserId = 1;
         try {
-          await supabase.from('movimentacoes').insert([{
+          const { error: movErr } = await supabase.from('movimentacoes').insert([{
             produto_id: newProdId,
             tipo: 'ENTRADA',
             central: destino,
@@ -437,6 +532,16 @@ const dataService = {
             usuario_id: validUserId,
             observacao: `Entrada inicial de cadastro - ${destino}`
           }]);
+          if (movErr && movErr.code === '23514') {
+            await supabase.from('movimentacoes').insert([{
+              produto_id: newProdId,
+              tipo: 'ENTRADA',
+              central: toLegacyCentral(destino),
+              quantidade: initialQty,
+              usuario_id: validUserId,
+              observacao: `Entrada inicial de cadastro - ${destino}`
+            }]);
+          }
         } catch (mErr) {
           console.warn('Aviso: erro não-fatal ao registrar histórico inicial:', mErr.message);
         }
@@ -474,9 +579,10 @@ const dataService = {
       INSERT INTO estoque_centrais (produto_id, central, quantidade)
       VALUES (?, ?, ?)
     `);
-    insertStock.run(newProdId, 'Central 1', destino === 'Central 1' ? initialQty : 0);
-    insertStock.run(newProdId, 'Central 2', destino === 'Central 2' ? initialQty : 0);
-    insertStock.run(newProdId, 'Central 3', destino === 'Central 3' ? initialQty : 0);
+    insertStock.run(newProdId, 'Central Piçarras', destino === 'Central Piçarras' ? initialQty : 0);
+    insertStock.run(newProdId, 'Central Penha', destino === 'Central Penha' ? initialQty : 0);
+    insertStock.run(newProdId, 'Central Armação', destino === 'Central Armação' ? initialQty : 0);
+    insertStock.run(newProdId, 'Rentter', destino === 'Rentter' ? initialQty : 0);
 
     if (initialQty > 0) {
       const insertMov = db.prepare(`
@@ -593,43 +699,60 @@ const dataService = {
   // ----------------------------------------------------------------------------
   async registrarSaida({ produto_id, central, quantidade, observacao }, user) {
     const qtd = parseInt(quantidade, 10);
+    const targetCentral = normalizeCentral(central);
 
     if (isSupabaseConfigured()) {
       const prod = await this.getProdutoById(produto_id);
       if (!prod) throw new Error('Produto não encontrado');
 
-      // Obter saldo da central
-      const { data: stockRow, error: stockErr } = await supabase
+      // Obter saldo da central (tenta nome normalizado, fallback para original)
+      let { data: stockRow, error: stockErr } = await supabase
         .from('estoque_centrais')
-        .select('id, quantidade')
+        .select('id, central, quantidade')
         .eq('produto_id', produto_id)
-        .eq('central', central)
+        .eq('central', targetCentral)
         .maybeSingle();
+
+      if (!stockRow && targetCentral !== central) {
+        const { data: legacyRow } = await supabase
+          .from('estoque_centrais')
+          .select('id, central, quantidade')
+          .eq('produto_id', produto_id)
+          .eq('central', central)
+          .maybeSingle();
+        if (legacyRow) stockRow = legacyRow;
+      }
 
       if (stockErr) throw stockErr;
 
       const currentStock = stockRow ? Number(stockRow.quantidade) : 0;
       if (qtd > currentStock) {
-        throw new Error(`Estoque insuficiente na ${central}! Saldo disponível: ${currentStock} ${prod.unidade_medida}(s), solicitado: ${qtd}.`);
+        throw new Error(`Estoque insuficiente na ${targetCentral}! Saldo disponível: ${currentStock} ${prod.unidade_medida}(s), solicitado: ${qtd}.`);
       }
 
       const novoSaldo = currentStock - qtd;
+      const actualCentralName = stockRow?.central || targetCentral;
 
       // Atualizar estoque da central
-      await supabase
-        .from('estoque_centrais')
-        .update({ quantidade: novoSaldo })
-        .eq('produto_id', produto_id)
-        .eq('central', central);
+      if (stockRow) {
+        await supabase
+          .from('estoque_centrais')
+          .update({ quantidade: novoSaldo })
+          .eq('id', stockRow.id);
+      } else {
+        await supabase
+          .from('estoque_centrais')
+          .insert([{ produto_id, central: actualCentralName, quantidade: novoSaldo }]);
+      }
 
       // Inserir registro de auditoria
       await supabase.from('movimentacoes').insert([{
         produto_id,
         tipo: 'SAIDA',
-        central,
+        central: actualCentralName,
         quantidade: qtd,
         usuario_id: user.id,
-        observacao: observacao ? observacao.trim() : `Saída rápida de estoque - ${central}`
+        observacao: observacao ? observacao.trim() : `Saída rápida de estoque - ${actualCentralName}`
       }]);
 
       const isAlerta = novoSaldo <= (prod.estoque_minimo || 5);
@@ -638,7 +761,7 @@ const dataService = {
         success: true,
         message: `Saída de ${qtd} ${prod.unidade_medida}(s) registrada com sucesso!`,
         produto_nome: prod.nome,
-        central,
+        central: actualCentralName,
         quantidade: qtd,
         novo_saldo: novoSaldo,
         estoque_minimo: prod.estoque_minimo,
@@ -651,33 +774,47 @@ const dataService = {
     const prod = queryOne('SELECT * FROM produtos WHERE id = ?', [produto_id]);
     if (!prod) throw new Error('Produto não encontrado');
 
-    const stockRow = queryOne(
-      'SELECT quantidade FROM estoque_centrais WHERE produto_id = ? AND central = ?',
-      [produto_id, central]
+    let stockRow = queryOne(
+      'SELECT id, central, quantidade FROM estoque_centrais WHERE produto_id = ? AND central = ?',
+      [produto_id, targetCentral]
     );
+    if (!stockRow && targetCentral !== central) {
+      stockRow = queryOne(
+        'SELECT id, central, quantidade FROM estoque_centrais WHERE produto_id = ? AND central = ?',
+        [produto_id, central]
+      );
+    }
     const currentStock = stockRow ? stockRow.quantidade : 0;
+    const actualCentralName = stockRow?.central || targetCentral;
 
     if (qtd > currentStock) {
-      throw new Error(`Estoque insuficiente na ${central}! Saldo disponível: ${currentStock} ${prod.unidade_medida}(s), solicitado: ${qtd}.`);
+      throw new Error(`Estoque insuficiente na ${actualCentralName}! Saldo disponível: ${currentStock} ${prod.unidade_medida}(s), solicitado: ${qtd}.`);
     }
 
-    db.prepare(`
-      UPDATE estoque_centrais SET quantidade = quantidade - ? WHERE produto_id = ? AND central = ?
-    `).run(qtd, produto_id, central);
+    const novoSaldo = currentStock - qtd;
+
+    if (stockRow) {
+      db.prepare(`
+        UPDATE estoque_centrais SET quantidade = ? WHERE id = ?
+      `).run(novoSaldo, stockRow.id);
+    } else {
+      db.prepare(`
+        INSERT INTO estoque_centrais (produto_id, central, quantidade) VALUES (?, ?, ?)
+      `).run(produto_id, actualCentralName, novoSaldo);
+    }
 
     db.prepare(`
       INSERT INTO movimentacoes (produto_id, tipo, central, quantidade, usuario_id, observacao)
       VALUES (?, 'SAIDA', ?, ?, ?, ?)
-    `).run(produto_id, central, qtd, user.id, observacao ? observacao.trim() : `Saída rápida de estoque - ${central}`);
+    `).run(produto_id, actualCentralName, qtd, user.id, observacao ? observacao.trim() : `Saída rápida de estoque - ${actualCentralName}`);
 
-    const novoSaldo = currentStock - qtd;
     const isAlerta = novoSaldo <= (prod.estoque_minimo || 5);
 
     return {
       success: true,
       message: `Saída de ${qtd} ${prod.unidade_medida}(s) registrada com sucesso!`,
       produto_nome: prod.nome,
-      central,
+      central: actualCentralName,
       quantidade: qtd,
       novo_saldo: novoSaldo,
       estoque_minimo: prod.estoque_minimo,
@@ -688,48 +825,59 @@ const dataService = {
 
   async registrarEntrada({ produto_id, central, quantidade, observacao }, user) {
     const qtd = parseInt(quantidade, 10);
+    const targetCentral = normalizeCentral(central);
 
     if (isSupabaseConfigured()) {
       const prod = await this.getProdutoById(produto_id);
       if (!prod) throw new Error('Produto não encontrado');
 
-      // Obter saldo da central
-      const { data: stockRow } = await supabase
+      // Obter saldo da central (tenta nome normalizado, fallback para original)
+      let { data: stockRow } = await supabase
         .from('estoque_centrais')
-        .select('id, quantidade')
+        .select('id, central, quantidade')
         .eq('produto_id', produto_id)
-        .eq('central', central)
+        .eq('central', targetCentral)
         .maybeSingle();
+
+      if (!stockRow && targetCentral !== central) {
+        const { data: legacyRow } = await supabase
+          .from('estoque_centrais')
+          .select('id, central, quantidade')
+          .eq('produto_id', produto_id)
+          .eq('central', central)
+          .maybeSingle();
+        if (legacyRow) stockRow = legacyRow;
+      }
 
       const currentStock = stockRow ? Number(stockRow.quantidade) : 0;
       const novoSaldo = currentStock + qtd;
+      const actualCentralName = stockRow?.central || targetCentral;
 
       if (stockRow) {
         await supabase
           .from('estoque_centrais')
           .update({ quantidade: novoSaldo })
-          .eq('produto_id', produto_id)
-          .eq('central', central);
+          .eq('id', stockRow.id);
       } else {
         await supabase
           .from('estoque_centrais')
-          .insert([{ produto_id, central, quantidade: novoSaldo }]);
+          .insert([{ produto_id, central: actualCentralName, quantidade: novoSaldo }]);
       }
 
       await supabase.from('movimentacoes').insert([{
         produto_id,
         tipo: 'ENTRADA',
-        central,
+        central: actualCentralName,
         quantidade: qtd,
         usuario_id: user.id,
-        observacao: observacao ? observacao.trim() : `Entrada / Reposição de estoque - ${central}`
+        observacao: observacao ? observacao.trim() : `Entrada / Reposição de estoque - ${actualCentralName}`
       }]);
 
       return {
         success: true,
         message: `Entrada de ${qtd} ${prod.unidade_medida}(s) registrada com sucesso!`,
         produto_nome: prod.nome,
-        central,
+        central: actualCentralName,
         quantidade: qtd,
         novo_saldo: novoSaldo,
         responsavel: user.nome
@@ -740,27 +888,35 @@ const dataService = {
     const prod = queryOne('SELECT * FROM produtos WHERE id = ?', [produto_id]);
     if (!prod) throw new Error('Produto não encontrado');
 
-    const stockRow = queryOne(
-      'SELECT quantidade FROM estoque_centrais WHERE produto_id = ? AND central = ?',
-      [produto_id, central]
+    let stockRow = queryOne(
+      'SELECT id, central, quantidade FROM estoque_centrais WHERE produto_id = ? AND central = ?',
+      [produto_id, targetCentral]
     );
+    if (!stockRow && targetCentral !== central) {
+      stockRow = queryOne(
+        'SELECT id, central, quantidade FROM estoque_centrais WHERE produto_id = ? AND central = ?',
+        [produto_id, central]
+      );
+    }
 
-    let currentStock = 0;
+    let currentStock = stockRow ? stockRow.quantidade : 0;
+    const actualCentralName = stockRow?.central || targetCentral;
+    const novoSaldo = currentStock + qtd;
+
     if (stockRow) {
-      currentStock = stockRow.quantidade;
       db.prepare(`
-        UPDATE estoque_centrais SET quantidade = quantidade + ? WHERE produto_id = ? AND central = ?
-      `).run(qtd, produto_id, central);
+        UPDATE estoque_centrais SET quantidade = ? WHERE id = ?
+      `).run(novoSaldo, stockRow.id);
     } else {
       db.prepare(`
         INSERT INTO estoque_centrais (produto_id, central, quantidade) VALUES (?, ?, ?)
-      `).run(produto_id, central, qtd);
+      `).run(produto_id, actualCentralName, novoSaldo);
     }
 
     db.prepare(`
       INSERT INTO movimentacoes (produto_id, tipo, central, quantidade, usuario_id, observacao)
       VALUES (?, 'ENTRADA', ?, ?, ?, ?)
-    `).run(produto_id, central, qtd, user.id, observacao ? observacao.trim() : `Entrada de estoque - ${central}`);
+    `).run(produto_id, actualCentralName, qtd, user.id, observacao ? observacao.trim() : `Entrada de estoque - ${actualCentralName}`);
 
     return {
       success: true,
@@ -858,26 +1014,32 @@ const dataService = {
       let itensEmAlertaCount = 0;
 
       (prods || []).forEach(p => {
-        const c1Obj = p.estoque_centrais?.find(ec => ec.central === 'Central 1');
-        const c2Obj = p.estoque_centrais?.find(ec => ec.central === 'Central 2');
-        const c3Obj = p.estoque_centrais?.find(ec => ec.central === 'Central 3');
+        const c1Obj = p.estoque_centrais?.find(ec => normalizeCentral(ec.central) === 'Central Piçarras');
+        const c2Obj = p.estoque_centrais?.find(ec => normalizeCentral(ec.central) === 'Central Penha');
+        const c3Obj = p.estoque_centrais?.find(ec => normalizeCentral(ec.central) === 'Central Armação');
+        const c4Obj = p.estoque_centrais?.find(ec => normalizeCentral(ec.central) === 'Rentter');
         const q1 = c1Obj ? Number(c1Obj.quantidade) : 0;
         const q2 = c2Obj ? Number(c2Obj.quantidade) : 0;
         const q3 = c3Obj ? Number(c3Obj.quantidade) : 0;
-        const total = q1 + q2 + q3;
+        const q4 = c4Obj ? Number(c4Obj.quantidade) : 0;
+        const total = q1 + q2 + q3 + q4;
 
-        if (central === 'Central 1') {
+        const targetNorm = normalizeCentral(central);
+        if (targetNorm === 'Central Piçarras') {
           totalUnidadesEstoque += q1;
           if (q1 <= p.estoque_minimo) itensEmAlertaCount++;
-        } else if (central === 'Central 2') {
+        } else if (targetNorm === 'Central Penha') {
           totalUnidadesEstoque += q2;
           if (q2 <= p.estoque_minimo) itensEmAlertaCount++;
-        } else if (central === 'Central 3') {
+        } else if (targetNorm === 'Central Armação') {
           totalUnidadesEstoque += q3;
           if (q3 <= p.estoque_minimo) itensEmAlertaCount++;
+        } else if (targetNorm === 'Rentter') {
+          totalUnidadesEstoque += q4;
+          if (q4 <= p.estoque_minimo) itensEmAlertaCount++;
         } else {
           totalUnidadesEstoque += total;
-          if (total <= p.estoque_minimo || q1 <= p.estoque_minimo || q2 <= p.estoque_minimo || q3 <= p.estoque_minimo) {
+          if (total <= p.estoque_minimo || q1 <= p.estoque_minimo || q2 <= p.estoque_minimo || q3 <= p.estoque_minimo || q4 <= p.estoque_minimo) {
             itensEmAlertaCount++;
           }
         }
@@ -902,25 +1064,29 @@ const dataService = {
       todayStart.setHours(0, 0, 0, 0);
       const movsHoje = movs.filter(m => new Date(m.data_movimentacao) >= todayStart);
 
-      const totalMovimentacoesHoje = central && central !== 'Todas'
-        ? movsHoje.filter(m => m.central === central).length
+      const targetNorm = normalizeCentral(central);
+
+      const totalMovimentacoesHoje = targetNorm && targetNorm !== 'Todas'
+        ? movsHoje.filter(m => normalizeCentral(m.central) === targetNorm).length
         : movsHoje.length;
 
-      const totalSaidasPeriodo = (central && central !== 'Todas'
-        ? saidasPeriodo.filter(m => m.central === central)
+      const totalSaidasPeriodo = (targetNorm && targetNorm !== 'Todas'
+        ? saidasPeriodo.filter(m => normalizeCentral(m.central) === targetNorm)
         : saidasPeriodo).reduce((acc, m) => acc + Number(m.quantidade), 0);
 
       const centraisMap = {
-        'Central 1': { central: 'Central 1', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#3b82f6' },
-        'Central 2': { central: 'Central 2', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#22c55e' },
-        'Central 3': { central: 'Central 3', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#a855f7' }
+        'Central Piçarras': { central: 'Central Piçarras', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#3b82f6' },
+        'Central Penha': { central: 'Central Penha', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#22c55e' },
+        'Central Armação': { central: 'Central Armação', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#a855f7' },
+        'Rentter': { central: 'Rentter', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#f59e0b' }
       };
 
       let totalGeralSaidas = 0;
       saidasPeriodo.forEach(m => {
-        if (centraisMap[m.central]) {
-          centraisMap[m.central].total_quantidade += Number(m.quantidade);
-          centraisMap[m.central].total_registros += 1;
+        const norm = normalizeCentral(m.central);
+        if (centraisMap[norm]) {
+          centraisMap[norm].total_quantidade += Number(m.quantidade);
+          centraisMap[norm].total_registros += 1;
           totalGeralSaidas += Number(m.quantidade);
         }
       });
@@ -931,7 +1097,8 @@ const dataService = {
       }));
 
       const calcTop5 = (cName) => {
-        const filtered = cName ? saidasPeriodo.filter(m => m.central === cName) : saidasPeriodo;
+        const target = cName ? normalizeCentral(cName) : null;
+        const filtered = target ? saidasPeriodo.filter(m => normalizeCentral(m.central) === target) : saidasPeriodo;
         const itemMap = {};
         filtered.forEach(m => {
           const pid = m.produto_id;
@@ -952,7 +1119,7 @@ const dataService = {
       const atividadesRecentes = movs.slice(0, 8).map(m => ({
         id: m.id,
         tipo: m.tipo,
-        central: m.central,
+        central: normalizeCentral(m.central) || m.central,
         quantidade: m.quantidade,
         observacao: m.observacao,
         data_movimentacao: m.data_movimentacao,
@@ -972,9 +1139,10 @@ const dataService = {
         consumo_comparativo: consumoComparativo,
         total_geral_saidas: totalGeralSaidas,
         top5_por_central: {
-          'Central 1': calcTop5('Central 1'),
-          'Central 2': calcTop5('Central 2'),
-          'Central 3': calcTop5('Central 3'),
+          'Central Piçarras': calcTop5('Central Piçarras'),
+          'Central Penha': calcTop5('Central Penha'),
+          'Central Armação': calcTop5('Central Armação'),
+          'Rentter': calcTop5('Rentter'),
           'Geral': calcTop5(null)
         },
         atividades_recentes: atividadesRecentes
@@ -991,26 +1159,48 @@ const dataService = {
       dateFilter = ` AND data_movimentacao >= date('now', 'start of month', 'localtime')`;
     }
 
+    const targetNorm = normalizeCentral(central);
+    let centralWhereEC = '';
+    let centralParamsEC = [];
+    let centralWhereM = '';
+    let centralParamsM = [];
+
+    if (targetNorm && targetNorm !== 'Todas') {
+      if (targetNorm === 'Central Piçarras') {
+        centralWhereEC = `WHERE central IN ('Central Piçarras', 'Central 1')`;
+        centralWhereM = `AND central IN ('Central Piçarras', 'Central 1')`;
+      } else if (targetNorm === 'Central Penha') {
+        centralWhereEC = `WHERE central IN ('Central Penha', 'Central 2')`;
+        centralWhereM = `AND central IN ('Central Penha', 'Central 2')`;
+      } else if (targetNorm === 'Central Armação') {
+        centralWhereEC = `WHERE central IN ('Central Armação', 'Central 3')`;
+        centralWhereM = `AND central IN ('Central Armação', 'Central 3')`;
+      } else if (targetNorm === 'Rentter') {
+        centralWhereEC = `WHERE central = 'Rentter'`;
+        centralWhereM = `AND central = 'Rentter'`;
+      }
+    }
+
     const totalProdutos = queryOne('SELECT COUNT(*) as total FROM produtos')?.total || 0;
     const totalUnidadesEstoque = queryOne(`
       SELECT COALESCE(SUM(quantidade), 0) as total 
       FROM estoque_centrais
-      ${central && central !== 'Todas' ? 'WHERE central = ?' : ''}
-    `, central && central !== 'Todas' ? [central] : [])?.total || 0;
+      ${centralWhereEC}
+    `, centralParamsEC)?.total || 0;
 
     const totalMovimentacoesHoje = queryOne(`
       SELECT COUNT(*) as total 
       FROM movimentacoes 
       WHERE date(data_movimentacao, 'localtime') = date('now', 'localtime')
-      ${central && central !== 'Todas' ? 'AND central = ?' : ''}
-    `, central && central !== 'Todas' ? [central] : [])?.total || 0;
+      ${centralWhereM}
+    `, centralParamsM)?.total || 0;
 
     const totalSaidasPeriodo = queryOne(`
       SELECT COALESCE(SUM(quantidade), 0) as total 
       FROM movimentacoes 
       WHERE tipo = 'SAIDA' ${dateFilter}
-      ${central && central !== 'Todas' ? 'AND central = ?' : ''}
-    `, central && central !== 'Todas' ? [central] : [])?.total || 0;
+      ${centralWhereM}
+    `, centralParamsM)?.total || 0;
 
     const produtosAlerta = queryAll(`
       SELECT 
@@ -1018,24 +1208,28 @@ const dataService = {
         COALESCE(c1.quantidade, 0) AS c1,
         COALESCE(c2.quantidade, 0) AS c2,
         COALESCE(c3.quantidade, 0) AS c3,
-        (COALESCE(c1.quantidade, 0) + COALESCE(c2.quantidade, 0) + COALESCE(c3.quantidade, 0)) AS total
+        COALESCE(c4.quantidade, 0) AS c4,
+        (COALESCE(c1.quantidade, 0) + COALESCE(c2.quantidade, 0) + COALESCE(c3.quantidade, 0) + COALESCE(c4.quantidade, 0)) AS total
       FROM produtos p
-      LEFT JOIN estoque_centrais c1 ON p.id = c1.produto_id AND c1.central = 'Central 1'
-      LEFT JOIN estoque_centrais c2 ON p.id = c2.produto_id AND c2.central = 'Central 2'
-      LEFT JOIN estoque_centrais c3 ON p.id = c3.produto_id AND c3.central = 'Central 3'
+      LEFT JOIN estoque_centrais c1 ON p.id = c1.produto_id AND (c1.central = 'Central Piçarras' OR c1.central = 'Central 1')
+      LEFT JOIN estoque_centrais c2 ON p.id = c2.produto_id AND (c2.central = 'Central Penha' OR c2.central = 'Central 2')
+      LEFT JOIN estoque_centrais c3 ON p.id = c3.produto_id AND (c3.central = 'Central Armação' OR c3.central = 'Central 3')
+      LEFT JOIN estoque_centrais c4 ON p.id = c4.produto_id AND c4.central = 'Rentter'
     `);
 
     let itensEmAlertaCount = 0;
     produtosAlerta.forEach(p => {
       const min = p.estoque_minimo;
-      if (central === 'Central 1') {
+      if (targetNorm === 'Central Piçarras') {
         if (p.c1 <= min) itensEmAlertaCount++;
-      } else if (central === 'Central 2') {
+      } else if (targetNorm === 'Central Penha') {
         if (p.c2 <= min) itensEmAlertaCount++;
-      } else if (central === 'Central 3') {
+      } else if (targetNorm === 'Central Armação') {
         if (p.c3 <= min) itensEmAlertaCount++;
+      } else if (targetNorm === 'Rentter') {
+        if (p.c4 <= min) itensEmAlertaCount++;
       } else {
-        if (p.total <= min || p.c1 <= min || p.c2 <= min || p.c3 <= min) {
+        if (p.total <= min || p.c1 <= min || p.c2 <= min || p.c3 <= min || p.c4 <= min) {
           itensEmAlertaCount++;
         }
       }
@@ -1052,16 +1246,18 @@ const dataService = {
     `);
 
     const centraisMap = {
-      'Central 1': { central: 'Central 1', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#3b82f6' },
-      'Central 2': { central: 'Central 2', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#22c55e' },
-      'Central 3': { central: 'Central 3', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#a855f7' }
+      'Central Piçarras': { central: 'Central Piçarras', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#3b82f6' },
+      'Central Penha': { central: 'Central Penha', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#22c55e' },
+      'Central Armação': { central: 'Central Armação', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#a855f7' },
+      'Rentter': { central: 'Rentter', total_quantidade: 0, total_registros: 0, percentual: 0, cor: '#f59e0b' }
     };
 
     let totalGeralSaidas = 0;
     saidasPorCentral.forEach(item => {
-      if (centraisMap[item.central]) {
-        centraisMap[item.central].total_quantidade = Number(item.total_quantidade);
-        centraisMap[item.central].total_registros = Number(item.total_registros);
+      const norm = normalizeCentral(item.central);
+      if (centraisMap[norm]) {
+        centraisMap[norm].total_quantidade += Number(item.total_quantidade);
+        centraisMap[norm].total_registros += Number(item.total_registros);
         totalGeralSaidas += Number(item.total_quantidade);
       }
     });
@@ -1072,6 +1268,23 @@ const dataService = {
     }));
 
     const getTop5ForCentral = (centralName) => {
+      const norm = normalizeCentral(centralName);
+      let cWhere = `m.central = ?`;
+      let params = [centralName];
+      if (norm === 'Central Piçarras') {
+        cWhere = `m.central IN ('Central Piçarras', 'Central 1')`;
+        params = [];
+      } else if (norm === 'Central Penha') {
+        cWhere = `m.central IN ('Central Penha', 'Central 2')`;
+        params = [];
+      } else if (norm === 'Central Armação') {
+        cWhere = `m.central IN ('Central Armação', 'Central 3')`;
+        params = [];
+      } else if (norm === 'Rentter') {
+        cWhere = `m.central = 'Rentter'`;
+        params = [];
+      }
+
       return queryAll(`
         SELECT 
           p.id,
@@ -1081,11 +1294,11 @@ const dataService = {
           COALESCE(SUM(m.quantidade), 0) as total_consumido
         FROM movimentacoes m
         JOIN produtos p ON m.produto_id = p.id
-        WHERE m.tipo = 'SAIDA' AND m.central = ? ${dateFilter}
+        WHERE m.tipo = 'SAIDA' AND ${cWhere} ${dateFilter}
         GROUP BY p.id
         ORDER BY total_consumido DESC
         LIMIT 5
-      `, [centralName]);
+      `, params);
     };
 
     const top5Geral = queryAll(`
@@ -1113,7 +1326,10 @@ const dataService = {
       JOIN usuarios u ON m.usuario_id = u.id
       ORDER BY m.data_movimentacao DESC
       LIMIT 8
-    `);
+    `).map(m => ({
+      ...m,
+      central: normalizeCentral(m.central) || m.central
+    }));
 
     return {
       periodo,
@@ -1127,9 +1343,10 @@ const dataService = {
       consumo_comparativo: consumoComparativo,
       total_geral_saidas: totalGeralSaidas,
       top5_por_central: {
-        'Central 1': getTop5ForCentral('Central 1'),
-        'Central 2': getTop5ForCentral('Central 2'),
-        'Central 3': getTop5ForCentral('Central 3'),
+        'Central Piçarras': getTop5ForCentral('Central Piçarras'),
+        'Central Penha': getTop5ForCentral('Central Penha'),
+        'Central Armação': getTop5ForCentral('Central Armação'),
+        'Rentter': getTop5ForCentral('Rentter'),
         'Geral': top5Geral
       },
       atividades_recentes: atividadesRecentes

@@ -37,7 +37,7 @@ function initTables() {
       email TEXT UNIQUE NOT NULL,
       senha TEXT NOT NULL,
       perfil TEXT CHECK(perfil IN ('Operador', 'Gerente', 'Administrador')) NOT NULL,
-      central_padrao TEXT CHECK(central_padrao IN ('Central 1', 'Central 2', 'Central 3', 'Todas')),
+      central_padrao TEXT CHECK(central_padrao IN ('Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter', 'Central 1', 'Central 2', 'Central 3', 'Todas')),
       criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -55,7 +55,7 @@ function initTables() {
     CREATE TABLE IF NOT EXISTS estoque_centrais (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       produto_id INTEGER NOT NULL,
-      central TEXT CHECK(central IN ('Central 1', 'Central 2', 'Central 3')) NOT NULL,
+      central TEXT CHECK(central IN ('Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter', 'Central 1', 'Central 2', 'Central 3')) NOT NULL,
       quantidade INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE,
       UNIQUE(produto_id, central)
@@ -65,7 +65,7 @@ function initTables() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       produto_id INTEGER NOT NULL,
       tipo TEXT CHECK(tipo IN ('ENTRADA', 'SAIDA')) NOT NULL,
-      central TEXT CHECK(central IN ('Central 1', 'Central 2', 'Central 3')) NOT NULL,
+      central TEXT CHECK(central IN ('Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter', 'Central 1', 'Central 2', 'Central 3')) NOT NULL,
       quantidade INTEGER NOT NULL,
       usuario_id INTEGER NOT NULL,
       observacao TEXT,

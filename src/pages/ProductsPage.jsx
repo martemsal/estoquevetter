@@ -238,38 +238,49 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
                   </div>
 
                   {/* Stock Breakdown per Central */}
-                  <div className="grid grid-cols-3 gap-2 p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80 mb-4 text-center">
-                    {/* Central 1 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80 mb-4 text-center">
+                    {/* Central Piçarras */}
                     <div className={`p-2 rounded-xl border ${
                       prod.alerta_c1 ? 'bg-rose-950/30 border-rose-500/40' : 'bg-blue-950/20 border-blue-900/40'
                     }`}>
-                      <div className="text-[10px] font-bold uppercase text-blue-400">Central 1</div>
+                      <div className="text-[10px] font-bold uppercase text-blue-400 truncate" title="Central Piçarras">Piçarras</div>
                       <div className={`text-base font-black ${prod.alerta_c1 ? 'text-rose-400' : 'text-white'}`}>
                         {prod.estoque_c1}
                       </div>
                       {prod.alerta_c1 && <div className="text-[9px] text-rose-400 font-bold">BAIXO</div>}
                     </div>
 
-                    {/* Central 2 */}
+                    {/* Central Penha */}
                     <div className={`p-2 rounded-xl border ${
                       prod.alerta_c2 ? 'bg-rose-950/30 border-rose-500/40' : 'bg-emerald-950/20 border-emerald-900/40'
                     }`}>
-                      <div className="text-[10px] font-bold uppercase text-emerald-400">Central 2</div>
+                      <div className="text-[10px] font-bold uppercase text-emerald-400 truncate" title="Central Penha">Penha</div>
                       <div className={`text-base font-black ${prod.alerta_c2 ? 'text-rose-400' : 'text-white'}`}>
                         {prod.estoque_c2}
                       </div>
                       {prod.alerta_c2 && <div className="text-[9px] text-rose-400 font-bold">BAIXO</div>}
                     </div>
 
-                    {/* Central 3 */}
+                    {/* Central Armação */}
                     <div className={`p-2 rounded-xl border ${
                       prod.alerta_c3 ? 'bg-rose-950/30 border-rose-500/40' : 'bg-purple-950/20 border-purple-900/40'
                     }`}>
-                      <div className="text-[10px] font-bold uppercase text-purple-400">Central 3</div>
+                      <div className="text-[10px] font-bold uppercase text-purple-400 truncate" title="Central Armação">Armação</div>
                       <div className={`text-base font-black ${prod.alerta_c3 ? 'text-rose-400' : 'text-white'}`}>
                         {prod.estoque_c3}
                       </div>
                       {prod.alerta_c3 && <div className="text-[9px] text-rose-400 font-bold">BAIXO</div>}
+                    </div>
+
+                    {/* Rentter */}
+                    <div className={`p-2 rounded-xl border ${
+                      prod.alerta_c4 ? 'bg-rose-950/30 border-rose-500/40' : 'bg-amber-950/20 border-amber-900/40'
+                    }`}>
+                      <div className="text-[10px] font-bold uppercase text-amber-400 truncate" title="Rentter">Rentter</div>
+                      <div className={`text-base font-black ${prod.alerta_c4 ? 'text-rose-400' : 'text-white'}`}>
+                        {prod.estoque_c4 || 0}
+                      </div>
+                      {prod.alerta_c4 && <div className="text-[9px] text-rose-400 font-bold">BAIXO</div>}
                     </div>
                   </div>
 
@@ -336,9 +347,10 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
                   <th className="py-4 px-4">Produto</th>
                   <th className="py-4 px-3">Código</th>
                   <th className="py-4 px-3">Categoria</th>
-                  <th className="py-4 px-3 text-center">Central 1</th>
-                  <th className="py-4 px-3 text-center">Central 2</th>
-                  <th className="py-4 px-3 text-center">Central 3</th>
+                  <th className="py-4 px-3 text-center" title="Central Piçarras">Piçarras</th>
+                  <th className="py-4 px-3 text-center" title="Central Penha">Penha</th>
+                  <th className="py-4 px-3 text-center" title="Central Armação">Armação</th>
+                  <th className="py-4 px-3 text-center" title="Rentter">Rentter</th>
                   <th className="py-4 px-3 text-center">Total</th>
                   <th className="py-4 px-3 text-center">Mínimo</th>
                   <th className="py-4 px-4 text-right">Ações Rápidas</th>
@@ -380,6 +392,11 @@ export default function ProductsPage({ onSelectProductForOutflow, onSelectProduc
                     <td className="py-3 px-3 text-center font-bold">
                       <span className={prod.alerta_c3 ? 'text-rose-400 font-black' : 'text-purple-400'}>
                         {prod.estoque_c3}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-center font-bold">
+                      <span className={prod.alerta_c4 ? 'text-rose-400 font-black' : 'text-amber-400'}>
+                        {prod.estoque_c4 || 0}
                       </span>
                     </td>
                     <td className="py-3 px-3 text-center font-black text-white">

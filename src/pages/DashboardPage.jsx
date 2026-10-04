@@ -30,7 +30,7 @@ export default function DashboardPage({ onNavigateToAlerts, showToast }) {
   const [periodo, setPeriodo] = useState('7dias'); // 'hoje' | '7dias' | 'mes'
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTopCentral, setActiveTopCentral] = useState('Central 1');
+  const [activeTopCentral, setActiveTopCentral] = useState('Central Piçarras');
 
   const fetchDashboard = async () => {
     setLoading(true);
@@ -52,6 +52,11 @@ export default function DashboardPage({ onNavigateToAlerts, showToast }) {
   }, [periodo, activeCentral]);
 
   const centraisColors = {
+    'Central Piçarras': '#3b82f6',
+    'Central Penha': '#22c55e',
+    'Central Armação': '#a855f7',
+    'Rentter': '#f59e0b',
+    // Fallbacks
     'Central 1': '#3b82f6',
     'Central 2': '#22c55e',
     'Central 3': '#a855f7'
@@ -77,7 +82,7 @@ export default function DashboardPage({ onNavigateToAlerts, showToast }) {
               Dashboard de Consumo por Central
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
-              Análise comparativa de saídas entre Central 1, Central 2 e Central 3
+              Análise comparativa de saídas entre Central Piçarras, Central Penha, Central Armação e Rentter
             </p>
           </div>
         </div>
@@ -267,7 +272,7 @@ export default function DashboardPage({ onNavigateToAlerts, showToast }) {
                 <BarChart3 className="w-5 h-5 text-emerald-400" />
                 <span>Volume Comparativo de Retiradas</span>
               </h2>
-              <span className="text-xs text-slate-400">Central 1 vs Central 2 vs Central 3</span>
+              <span className="text-xs text-slate-400">Piçarras vs Penha vs Armação vs Rentter</span>
             </div>
 
             <div className="h-64 sm:h-72">
@@ -295,10 +300,10 @@ export default function DashboardPage({ onNavigateToAlerts, showToast }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-800 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-800 text-center">
             {data?.consumo_comparativo?.map(c => (
               <div key={c.central} className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
-                <div className="text-[11px] font-bold text-slate-400">{c.central}</div>
+                <div className="text-[11px] font-bold text-slate-400 truncate" title={c.central}>{c.central}</div>
                 <div className="text-lg font-black text-white mt-0.5">{c.total_quantidade} <span className="text-xs font-normal text-slate-400">un</span></div>
                 <div className="text-[10px] text-slate-400">{c.total_registros} saídas</div>
               </div>
@@ -327,7 +332,7 @@ export default function DashboardPage({ onNavigateToAlerts, showToast }) {
 
           {/* Central Selector Tabs for Top 5 */}
           <div className="flex items-center bg-slate-950 p-1.5 rounded-2xl border border-slate-800 overflow-x-auto">
-            {['Central 1', 'Central 2', 'Central 3', 'Geral'].map(c => (
+            {['Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter', 'Geral'].map(c => (
               <button
                 key={c}
                 onClick={() => setActiveTopCentral(c)}

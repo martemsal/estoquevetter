@@ -145,11 +145,11 @@ export default function LowStockAlertsPage({ onReplenishProduct, showToast }) {
                   </div>
 
                   {/* Centrais Status Box */}
-                  <div className="grid grid-cols-3 gap-2 p-3 bg-slate-950/70 rounded-2xl border border-slate-800/80 mb-4 text-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-950/70 rounded-2xl border border-slate-800/80 mb-4 text-center">
                     <div className={`p-2 rounded-xl border ${
                       p.alerta_c1 ? 'bg-rose-950/50 border-rose-500/60' : 'bg-slate-900 border-slate-800'
                     }`}>
-                      <div className="text-[10px] font-bold uppercase text-blue-400">Central 1</div>
+                      <div className="text-[10px] font-bold uppercase text-blue-400 truncate" title="Central Piçarras">Piçarras</div>
                       <div className={`text-base font-black ${p.alerta_c1 ? 'text-rose-400' : 'text-slate-300'}`}>
                         {p.estoque_c1}
                       </div>
@@ -159,7 +159,7 @@ export default function LowStockAlertsPage({ onReplenishProduct, showToast }) {
                     <div className={`p-2 rounded-xl border ${
                       p.alerta_c2 ? 'bg-rose-950/50 border-rose-500/60' : 'bg-slate-900 border-slate-800'
                     }`}>
-                      <div className="text-[10px] font-bold uppercase text-emerald-400">Central 2</div>
+                      <div className="text-[10px] font-bold uppercase text-emerald-400 truncate" title="Central Penha">Penha</div>
                       <div className={`text-base font-black ${p.alerta_c2 ? 'text-rose-400' : 'text-slate-300'}`}>
                         {p.estoque_c2}
                       </div>
@@ -169,11 +169,21 @@ export default function LowStockAlertsPage({ onReplenishProduct, showToast }) {
                     <div className={`p-2 rounded-xl border ${
                       p.alerta_c3 ? 'bg-rose-950/50 border-rose-500/60' : 'bg-slate-900 border-slate-800'
                     }`}>
-                      <div className="text-[10px] font-bold uppercase text-purple-400">Central 3</div>
+                      <div className="text-[10px] font-bold uppercase text-purple-400 truncate" title="Central Armação">Armação</div>
                       <div className={`text-base font-black ${p.alerta_c3 ? 'text-rose-400' : 'text-slate-300'}`}>
                         {p.estoque_c3}
                       </div>
                       {p.alerta_c3 && <span className="text-[9px] font-bold text-rose-400">ABAIXO</span>}
+                    </div>
+
+                    <div className={`p-2 rounded-xl border ${
+                      p.alerta_c4 ? 'bg-rose-950/50 border-rose-500/60' : 'bg-slate-900 border-slate-800'
+                    }`}>
+                      <div className="text-[10px] font-bold uppercase text-amber-400 truncate" title="Rentter">Rentter</div>
+                      <div className={`text-base font-black ${p.alerta_c4 ? 'text-rose-400' : 'text-slate-300'}`}>
+                        {p.estoque_c4 || 0}
+                      </div>
+                      {p.alerta_c4 && <span className="text-[9px] font-bold text-rose-400">ABAIXO</span>}
                     </div>
                   </div>
                 </div>

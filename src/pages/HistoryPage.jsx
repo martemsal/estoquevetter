@@ -149,9 +149,10 @@ export default function HistoryPage({ showToast }) {
           className="px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-sky-500 transition cursor-pointer"
         >
           <option value="">Todas as Centrais</option>
-          <option value="Central 1">Central 1</option>
-          <option value="Central 2">Central 2</option>
-          <option value="Central 3">Central 3</option>
+          <option value="Central Piçarras">Central Piçarras</option>
+          <option value="Central Penha">Central Penha</option>
+          <option value="Central Armação">Central Armação</option>
+          <option value="Rentter">Rentter</option>
         </select>
       </div>
 
@@ -221,11 +222,13 @@ export default function HistoryPage({ showToast }) {
 
                       <td className="py-3.5 px-3 text-center whitespace-nowrap">
                         <span className={`px-2.5 py-1 rounded-xl text-xs font-bold border ${
-                          m.central === 'Central 1'
+                          m.central === 'Central Piçarras' || m.central === 'Central 1'
                             ? 'bg-blue-950/60 text-blue-300 border-blue-800'
-                            : m.central === 'Central 2'
+                            : m.central === 'Central Penha' || m.central === 'Central 2'
                             ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800'
-                            : 'bg-purple-950/60 text-purple-300 border-purple-800'
+                            : m.central === 'Central Armação' || m.central === 'Central 3'
+                            ? 'bg-purple-950/60 text-purple-300 border-purple-800'
+                            : 'bg-amber-950/60 text-amber-300 border-amber-800'
                         }`}>
                           {m.central}
                         </span>

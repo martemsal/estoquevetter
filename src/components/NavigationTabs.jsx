@@ -49,7 +49,7 @@ export default function NavigationTabs({ activeTab, setActiveTab }) {
     },
     {
       id: 'dashboard',
-      label: 'Dashboard (3 Centrais)',
+      label: 'Dashboard (4 Centrais)',
       shortLabel: 'Dashboard',
       icon: BarChart3,
       color: 'hover:text-indigo-400 active:text-indigo-300',

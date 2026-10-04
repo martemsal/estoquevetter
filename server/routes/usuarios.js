@@ -31,7 +31,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Perfil inválido. Deve ser Operador, Gerente ou Administrador' });
     }
 
-    const central = central_padrao || (perfil === 'Administrador' ? 'Todas' : 'Central 1');
+    const central = central_padrao || (perfil === 'Administrador' ? 'Todas' : 'Central Piçarras');
 
     const created = await dataService.createUsuario({
       nome: nome.trim(),

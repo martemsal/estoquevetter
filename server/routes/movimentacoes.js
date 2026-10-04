@@ -12,8 +12,13 @@ router.post('/saida', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Produto não informado' });
     }
 
-    if (!['Central 1', 'Central 2', 'Central 3'].includes(central)) {
-      return res.status(400).json({ error: 'Selecione uma Central de Vendas válida (Central 1, 2 ou 3)' });
+    const validCentrais = [
+      'Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter',
+      'Central 1', 'Central 2', 'Central 3'
+    ];
+
+    if (!validCentrais.includes(central)) {
+      return res.status(400).json({ error: 'Selecione uma Central de Vendas válida (Central Piçarras, Central Penha, Central Armação ou Rentter)' });
     }
 
     const qtd = parseInt(quantidade, 10);
@@ -44,8 +49,13 @@ router.post('/entrada', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Produto não informado' });
     }
 
-    if (!['Central 1', 'Central 2', 'Central 3'].includes(central)) {
-      return res.status(400).json({ error: 'Selecione uma Central de Vendas válida' });
+    const validCentrais = [
+      'Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter',
+      'Central 1', 'Central 2', 'Central 3'
+    ];
+
+    if (!validCentrais.includes(central)) {
+      return res.status(400).json({ error: 'Selecione uma Central de Vendas válida (Central Piçarras, Central Penha, Central Armação ou Rentter)' });
     }
 
     const qtd = parseInt(quantidade, 10);

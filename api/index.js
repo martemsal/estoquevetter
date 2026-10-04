@@ -34,7 +34,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
     timestamp: new Date().toISOString(),
-    name: 'Estoque Vetter Tablet 3 Centrais',
+    name: 'Estoque Vetter Tablet 4 Centrais',
     environment: 'vercel-serverless'
   });
 });

@@ -62,7 +62,7 @@ export default function LoginPage() {
             ESTOQUE <span className="text-sky-400">VETTER</span>
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Sistema Tablet de Controle de Estoque • 3 Centrais de Vendas
+            Sistema Tablet de Controle de Estoque • 4 Centrais de Vendas
           </p>
         </div>
 

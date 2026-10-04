@@ -30,7 +30,7 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
 
   // Form states
   const [targetCentral, setTargetCentral] = useState(
-    ['Central 1', 'Central 2', 'Central 3'].includes(activeCentral) ? activeCentral : 'Central 1'
+    ['Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter'].includes(activeCentral) ? activeCentral : 'Central Piçarras'
   );
   const [quantidade, setQuantidade] = useState(1);
   const [observacao, setObservacao] = useState('');
@@ -64,8 +64,9 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
 
   // Update default central if user changes activeCentral filter
   useEffect(() => {
-    if (['Central 1', 'Central 2', 'Central 3'].includes(activeCentral)) {
-      setTargetCentral(activeCentral);
+    const norm = activeCentral === 'Central 1' ? 'Central Piçarras' : activeCentral === 'Central 2' ? 'Central Penha' : activeCentral === 'Central 3' ? 'Central Armação' : activeCentral;
+    if (['Central Piçarras', 'Central Penha', 'Central Armação', 'Rentter'].includes(norm)) {
+      setTargetCentral(norm);
     }
   }, [activeCentral]);
 
@@ -117,9 +118,10 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
   // Get current stock for the selected central
   const getCurrentStock = () => {
     if (!selectedProduct) return 0;
-    if (targetCentral === 'Central 1') return selectedProduct.estoque_c1 || 0;
-    if (targetCentral === 'Central 2') return selectedProduct.estoque_c2 || 0;
-    if (targetCentral === 'Central 3') return selectedProduct.estoque_c3 || 0;
+    if (targetCentral === 'Central Piçarras' || targetCentral === 'Central 1') return selectedProduct.estoque_c1 || 0;
+    if (targetCentral === 'Central Penha' || targetCentral === 'Central 2') return selectedProduct.estoque_c2 || 0;
+    if (targetCentral === 'Central Armação' || targetCentral === 'Central 3') return selectedProduct.estoque_c3 || 0;
+    if (targetCentral === 'Rentter') return selectedProduct.estoque_c4 || 0;
     return selectedProduct.estoque_total || 0;
   };
 
@@ -341,10 +343,11 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
                       <div className="flex-1 min-w-0">
                         <div className="font-bold text-sm truncate text-white">{p.nome}</div>
                         <div className="text-xs text-slate-400 font-mono">{p.codigo_barras || 'Sem código'}</div>
-                        <div className="flex items-center gap-2 mt-1 text-[11px]">
-                          <span className="text-blue-400 font-semibold">C1: {p.estoque_c1}</span>
-                          <span className="text-emerald-400 font-semibold">C2: {p.estoque_c2}</span>
-                          <span className="text-purple-400 font-semibold">C3: {p.estoque_c3}</span>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px]">
+                          <span className="text-blue-400 font-semibold" title="Central Piçarras">Piç: {p.estoque_c1}</span>
+                          <span className="text-emerald-400 font-semibold" title="Central Penha">Pen: {p.estoque_c2}</span>
+                          <span className="text-purple-400 font-semibold" title="Central Armação">Arm: {p.estoque_c3}</span>
+                          <span className="text-amber-400 font-semibold" title="Rentter">Ren: {p.estoque_c4 || 0}</span>
                         </div>
                       </div>
 
@@ -478,11 +481,12 @@ export default function OutflowPage({ preselectedProduct = null, onClearPreselec
                   <span className="text-[11px] text-slate-500 font-normal">Obrigatório</span>
                 </label>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { id: 'Central 1', stock: selectedProduct.estoque_c1, color: 'border-blue-500/50 bg-blue-950/30' },
-                    { id: 'Central 2', stock: selectedProduct.estoque_c2, color: 'border-emerald-500/50 bg-emerald-950/30' },
-                    { id: 'Central 3', stock: selectedProduct.estoque_c3, color: 'border-purple-500/50 bg-purple-950/30' }
+                    { id: 'Central Piçarras', label: 'Central Piçarras', stock: selectedProduct.estoque_c1, color: 'border-blue-500/50 bg-blue-950/30' },
+                    { id: 'Central Penha', label: 'Central Penha', stock: selectedProduct.estoque_c2, color: 'border-emerald-500/50 bg-emerald-950/30' },
+                    { id: 'Central Armação', label: 'Central Armação', stock: selectedProduct.estoque_c3, color: 'border-purple-500/50 bg-purple-950/30' },
+                    { id: 'Rentter', label: 'Rentter', stock: selectedProduct.estoque_c4, color: 'border-amber-500/50 bg-amber-950/30' }
                   ].map(c => {
                     const isSelected = targetCentral === c.id;
                     const noStock = (c.stock || 0) <= 0;
